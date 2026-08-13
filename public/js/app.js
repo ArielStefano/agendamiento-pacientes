@@ -1,5 +1,10 @@
 "use strict";
 
+if (!window.supabase) {
+  window.location.href = "index.html";
+  throw new Error("supabase-js no cargó");
+}
+
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const app = {

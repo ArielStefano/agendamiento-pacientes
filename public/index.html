@@ -37,40 +37,45 @@
   </div>
 
   <script src="js/config.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="vendor/supabase.min.js"></script>
   <script>
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const alertEl = document.getElementById("alert");
+    if (!window.supabase) {
+      alertEl.textContent = "Error al cargar la librería de Supabase. Recargue la página (Ctrl+F5).";
+      alertEl.classList.add("show");
+    } else {
+      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    (async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (data.session) window.location.href = "dashboard.html";
-      } catch (e) {}
-    })();
+      (async () => {
+        try {
+          const { data } = await supabase.auth.getSession();
+          if (data.session) window.location.href = "dashboard.html";
+        } catch (e) {}
+      })();
 
-    document.getElementById("login-form").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const alertEl = document.getElementById("alert");
-      const btn = document.getElementById("btn-login");
-      btn.disabled = true;
-      btn.textContent = "Ingresando...";
+      document.getElementById("login-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById("btn-login");
+        btn.disabled = true;
+        btn.textContent = "Ingresando...";
 
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: document.getElementById("email").value,
-          password: document.getElementById("password").value,
-        });
-        if (error) throw new Error("Correo o contraseña incorrectos");
-        alertEl.classList.remove("show");
-        window.location.href = "dashboard.html";
-      } catch (err) {
-        alertEl.textContent = err.message;
-        alertEl.classList.add("show");
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Iniciar sesión";
-      }
-    });
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: document.getElementById("email").value,
+            password: document.getElementById("password").value,
+          });
+          if (error) throw new Error("Correo o contraseña incorrectos");
+          alertEl.classList.remove("show");
+          window.location.href = "dashboard.html";
+        } catch (err) {
+          alertEl.textContent = err.message;
+          alertEl.classList.add("show");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Iniciar sesión";
+        }
+      });
+    }
   </script>
 </body>
 </html>
