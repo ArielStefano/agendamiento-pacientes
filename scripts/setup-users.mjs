@@ -1,15 +1,17 @@
 // ============================================================
-//  Crear usuarios de demostración en Supabase Auth
+//  Crear usuarios de demostración en Supabase Auth + perfiles
 //
 //  Uso:
 //    1) Copie .env.example a .env y complete:
-//         SUPABASE_URL = https://TU-PROYECTO.supabase.co
-//         SUPABASE_SERVICE_ROLE_KEY = <Service Role Key>
+//         SUPABASE_URL
+//         SUPABASE_SERVICE_ROLE_KEY   (secret key)
+//         SUPABASE_PUBLISHABLE_KEY    (publishable key, opcional)
+//         SUPABASE_PAT                (token personal para Management API)
 //    2) Ejecute:
 //         node scripts/setup-users.mjs
 //
-//  IMPORTANTE: la clave service_role tiene acceso total.
-//  Ejecute este script SOLO en su máquina y no lo suba al repositorio.
+//  IMPORTANTE: las claves secret/pat tienen acceso total.
+//  Ejecute este script SOLO en su máquina; el .env NO se sube al repositorio.
 // ============================================================
 
 import { readFileSync } from "node:fs";
@@ -30,11 +32,15 @@ loadEnv();
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
+const PAT = process.env.SUPABASE_PAT;
 
-if (!SUPABASE_URL || !SERVICE_KEY) {
-  console.error("Faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY (revise .env)");
+if (!SUPABASE_URL || !SERVICE_KEY || !PAT) {
+  console.error("Faltan SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY o SUPABASE_PAT (revise .env)");
   process.exit(1);
 }
+
+const PROJECT_REF = SUPABASE_URL.replace(/^https:\/\//, "").split(".")[0];
 
 const USUARIOS = [
   { email: "admin@clinica.com", password: "admin123", perfil: { nombre: "Administrador", rol: "admin" } },
@@ -44,7 +50,11 @@ const USUARIOS = [
   { email: "lucia@clinica.com", password: "medico123", perfil: { nombre: "Dra. Lucía Fernández", rol: "medico", medico_email: "lucia@clinica.com" } },
 ];
 
-async function adminApi(path, options = {}) {
+function escSql(s) {
+  return String(s ?? "").replace(/'/g, "''");
+}
+
+async function authAdminApi(path, options = {}) {
   const res = await fetch(`${SUPABASE_URL}${path}`, {
     ...options,
     headers: {
@@ -61,32 +71,44 @@ async function adminApi(path, options = {}) {
   return data;
 }
 
+async function managementQuery(sql) {
+  const res = await fetch(`https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${PAT}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ query: sql }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(`SQL -> ${res.status}: ${JSON.stringify(data)}`);
+  }
+  return data;
+}
+
 async function main() {
   console.log("Conectando a:", SUPABASE_URL);
 
-  const medicos = await adminApi("/rest/v1/medicos?select=id,email");
+  const medicos = await managementQuery("select id, email from medicos;");
   const medicoPorEmail = Object.fromEntries(medicos.map((m) => [m.email, m.id]));
 
   for (const u of USUARIOS) {
     console.log(`Creando usuario ${u.email} ...`);
     try {
-      const created = await adminApi("/auth/v1/admin/users", {
+      const created = await authAdminApi("/auth/v1/admin/users", {
         method: "POST",
         body: JSON.stringify({ email: u.email, password: u.password, email_confirm: true }),
       });
 
-      const perfil = {
-        user_id: created.id,
-        nombre: u.perfil.nombre,
-        rol: u.perfil.rol,
-        medico_id: u.perfil.medico_email ? medicoPorEmail[u.perfil.medico_email] || null : null,
-      };
+      const medico_id = u.perfil.medico_email ? medicoPorEmail[u.perfil.medico_email] || null : null;
+      const medicoIdSql = medico_id ? `'${medico_id}'` : "null";
 
-      await adminApi("/rest/v1/perfiles", {
-        method: "POST",
-        headers: { Prefer: "return=representation" },
-        body: JSON.stringify(perfil),
-      });
+      const sql =
+        `insert into public.perfiles (user_id, nombre, rol, medico_id) ` +
+        `values ('${created.id}', '${escSql(u.perfil.nombre)}', '${u.perfil.rol}', ${medicoIdSql});`;
+
+      await managementQuery(sql);
       console.log(`  -> OK (${created.id})`);
     } catch (err) {
       console.error(`  -> Error: ${err.message}`);
