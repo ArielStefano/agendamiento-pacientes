@@ -186,7 +186,8 @@ function cerrarDetalle() {
   document.getElementById("modal-detalle").classList.remove("open");
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  await window.appReady;
   if (!app.user) return;
   cargarPacientes();
   const input = document.getElementById("buscar");

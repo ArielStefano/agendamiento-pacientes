@@ -40,11 +40,11 @@
   <script src="vendor/supabase.min.js"></script>
   <script>
     const alertEl = document.getElementById("alert");
-    if (!window.supabase) {
+    if (!window.supabaseLib) {
       alertEl.textContent = "Error al cargar la librería de Supabase. Recargue la página (Ctrl+F5).";
       alertEl.classList.add("show");
     } else {
-      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const supabase = window.supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
       (async () => {
         try {

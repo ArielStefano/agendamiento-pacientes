@@ -1,6 +1,7 @@
 "use strict";
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  await window.appReady;
   if (!app.user) return;
   const hoy = app.hoyISO();
   const en7 = app.addDaysISO(7);

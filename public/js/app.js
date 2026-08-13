@@ -1,11 +1,11 @@
 "use strict";
 
-if (!window.supabase) {
+if (!window.supabaseLib) {
   window.location.href = "index.html";
   throw new Error("supabase-js no cargó");
 }
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = window.supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const app = {
   user: null,
@@ -190,4 +190,6 @@ function toast(message, type = "") {
   }, 3000);
 }
 
-document.addEventListener("DOMContentLoaded", () => app.init());
+document.addEventListener("DOMContentLoaded", () => {
+  window.appReady = app.init();
+});

@@ -160,7 +160,8 @@ function esc(str) {
   return div.innerHTML;
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  await window.appReady;
   if (!app.user) return;
   initCalendario().catch((e) => toast(e.message, "error"));
   document.getElementById("modal-detalle").addEventListener("click", (e) => {

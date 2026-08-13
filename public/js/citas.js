@@ -291,7 +291,8 @@ function esc(str) {
   return div.innerHTML;
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  await window.appReady;
   if (!app.user) return;
   initCitas().catch((e) => toast(e.message, "error"));
   document.getElementById("modal-cita").addEventListener("click", (e) => {
