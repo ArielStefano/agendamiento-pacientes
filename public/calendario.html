@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calendario | Agendamiento de Pacientes</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-title="Calendario de médicos">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div class="main">
+      <header class="topbar" id="topbar"></header>
+      <main class="content">
+        <div class="calendar-toolbar">
+          <select id="sel-medico" onchange="cargarSemana()"></select>
+          <button class="btn btn-secondary btn-sm" onclick="cambiarSemana(-1)">← Semana</button>
+          <button class="btn btn-secondary btn-sm" onclick="irHoy()">Hoy</button>
+          <button class="btn btn-secondary btn-sm" onclick="cambiarSemana(1)">Semana →</button>
+          <span id="semana-label" class="muted small"></span>
+        </div>
+        <div class="card" style="padding:0">
+          <div class="table-wrap">
+            <div id="calendario" class="calendar-grid"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modal-detalle">
+    <div class="modal">
+      <h3>Detalle de la cita</h3>
+      <div id="detalle-body"></div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/calendario.js"></script>
+</body>
+</html>
