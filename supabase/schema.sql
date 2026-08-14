@@ -26,6 +26,7 @@ create table if not exists public.perfiles (
   rol text not null check (rol in ('admin', 'medico', 'recepcion', 'paciente')),
   medico_id uuid references public.medicos (id) on delete set null,
   paciente_id uuid references public.pacientes (id) on delete cascade,
+  representante boolean not null default false,
   activo boolean not null default true,
   created_at timestamptz not null default now()
 );
@@ -669,7 +670,9 @@ revoke all on function public.generar_recordatorios_cita(uuid) from public;
 -- ---------- Pacientes: autorregistro (página pública) ----------
 
 create or replace function public.registrar_paciente(
-  p_nombre text,
+  p_nombre_paciente text,
+  p_es_representante boolean,
+  p_nombre_cuenta text,
   p_documento text,
   p_email text,
   p_telefono text,
@@ -685,9 +688,20 @@ declare
   v_email text;
   v_user_id uuid;
   v_paciente_id uuid;
+  v_nombre_cuenta text;
 begin
   v_email := lower(trim(p_email));
-  if p_nombre is null or trim(p_nombre) = '' then raise exception 'El nombre es obligatorio'; end if;
+  if p_nombre_paciente is null or trim(p_nombre_paciente) = '' then
+    raise exception 'El nombre del paciente es obligatorio';
+  end if;
+  if coalesce(p_es_representante, false) then
+    if p_nombre_cuenta is null or trim(p_nombre_cuenta) = '' then
+      raise exception 'El nombre del representante es obligatorio';
+    end if;
+    v_nombre_cuenta := trim(p_nombre_cuenta);
+  else
+    v_nombre_cuenta := trim(p_nombre_paciente);
+  end if;
   if v_email is null or v_email = '' then raise exception 'El email es obligatorio'; end if;
   if v_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then raise exception 'El email no es válido'; end if;
   if p_contrasena is null or length(p_contrasena) < 6 then raise exception 'La contraseña debe tener al menos 6 caracteres'; end if;
@@ -713,16 +727,16 @@ begin
           jsonb_build_object('sub', v_user_id, 'email', v_email), 'email', now(), now(), now());
 
   insert into public.pacientes (documento, nombre, email, telefono, fecha_nacimiento, direccion, alergias)
-  values (nullif(trim(p_documento), ''), trim(p_nombre), v_email, p_telefono, p_fecha_nacimiento, p_direccion, p_alergias)
+  values (nullif(trim(p_documento), ''), trim(p_nombre_paciente), v_email, p_telefono, p_fecha_nacimiento, p_direccion, p_alergias)
   returning id into v_paciente_id;
 
-  insert into public.perfiles (user_id, nombre, rol, paciente_id)
-  values (v_user_id, trim(p_nombre), 'paciente', v_paciente_id);
+  insert into public.perfiles (user_id, nombre, rol, paciente_id, representante)
+  values (v_user_id, v_nombre_cuenta, 'paciente', v_paciente_id, coalesce(p_es_representante, false));
 
   return jsonb_build_object('ok', true, 'email', v_email);
 end;
 $$;
 
 -- Accesible por cualquiera (página pública de registro) y por usuarios autenticados
-grant execute on function public.registrar_paciente(text, text, text, text, date, text, text, text) to anon, authenticated;
-revoke all on function public.registrar_paciente(text, text, text, text, date, text, text, text) from public;
+grant execute on function public.registrar_paciente(text, boolean, text, text, text, text, date, text, text, text) to anon, authenticated;
+revoke all on function public.registrar_paciente(text, boolean, text, text, text, text, date, text, text, text) from public;

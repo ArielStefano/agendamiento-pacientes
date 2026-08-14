@@ -20,6 +20,17 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (e) {}
   })();
 
+  const tipoCuenta = document.getElementById("tipo_cuenta");
+  const repField = document.getElementById("rep-field");
+  const repNombre = document.getElementById("nombre_cuenta");
+
+  function toggleRepresentante() {
+    repField.classList.toggle("hidden", tipoCuenta.value !== "representante");
+    repNombre.required = tipoCuenta.value === "representante";
+  }
+  tipoCuenta.addEventListener("change", toggleRepresentante);
+  toggleRepresentante();
+
   document.getElementById("registro-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     alertEl.classList.remove("show");
@@ -28,9 +39,13 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.disabled = true;
     btn.textContent = "Creando cuenta...";
 
+    const esRepresentante = tipoCuenta.value === "representante";
+
     try {
       const { data, error } = await supabase.rpc("registrar_paciente", {
-        p_nombre: document.getElementById("nombre").value,
+        p_nombre_paciente: document.getElementById("nombre").value,
+        p_es_representante: esRepresentante,
+        p_nombre_cuenta: esRepresentante ? repNombre.value : null,
         p_documento: document.getElementById("documento").value || null,
         p_email: document.getElementById("email").value,
         p_telefono: document.getElementById("telefono").value || null,

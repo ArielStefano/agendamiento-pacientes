@@ -785,6 +785,10 @@ tbody tr:hover {
   text-align: center;
 }
 
+.hidden {
+  display: none;
+}
+
 .flex {
   display: flex;
   gap: 10px;

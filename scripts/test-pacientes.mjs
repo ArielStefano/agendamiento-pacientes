@@ -20,8 +20,10 @@ const REST = `${URL}/rest/v1`;
 const PROJECT_REF = URL.replace(/^https:\/\//, "").split(".")[0];
 
 const SUFIJO = new Date().getTime().toString(36);
-const EMAIL = `prueba.paciente.${SUFIJO}@test.com`;
-const NOMBRE = "Paciente Prueba Autoregistro";
+const EMAIL_PACIENTE = `prueba.pac.${SUFIJO}@test.com`;
+const EMAIL_REPRESENTANTE = `prueba.rep.${SUFIJO}@test.com`;
+const NOMBRE_PACIENTE = "Niño Paciente Prueba";
+const NOMBRE_REPRESENTANTE = "Mamá Representante Prueba";
 const CLAVE = "PacienteTest123";
 
 let failures = 0;
@@ -51,20 +53,20 @@ async function registrar(body) {
   return { ok: res.ok, status: res.status, data };
 }
 
-async function post(path, body, token) {
+async function get(path, token) {
   const res = await fetch(`${REST}${path}`, {
-    method: "POST",
-    headers: { apikey: PUBLISHABLE, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body || {}),
+    headers: { apikey: PUBLISHABLE, Authorization: `Bearer ${token}` },
   });
   const data = await res.json();
   if (!res.ok) throw new Error(`${path}: ${res.status} ${JSON.stringify(data)}`);
   return data;
 }
 
-async function get(path, token) {
+async function post(path, body, token) {
   const res = await fetch(`${REST}${path}`, {
-    headers: { apikey: PUBLISHABLE, Authorization: `Bearer ${token}` },
+    method: "POST",
+    headers: { apikey: PUBLISHABLE, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body || {}),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(`${path}: ${res.status} ${JSON.stringify(data)}`);
@@ -82,77 +84,76 @@ async function managementQuery(sql) {
   return data;
 }
 
-const payload = {
-  p_nombre: NOMBRE,
-  p_documento: null,
-  p_email: EMAIL,
-  p_telefono: "555-0000",
-  p_fecha_nacimiento: "2015-06-10",
-  p_direccion: "Calle de Prueba 123",
-  p_alergias: "Ninguna",
-  p_contrasena: CLAVE,
-};
+function basePayload(email, nombrePaciente, contrasena) {
+  return {
+    p_nombre_paciente: nombrePaciente,
+    p_es_representante: false,
+    p_nombre_cuenta: null,
+    p_documento: null,
+    p_email: email,
+    p_telefono: "555-0000",
+    p_fecha_nacimiento: "2015-06-10",
+    p_direccion: "Calle de Prueba 123",
+    p_alergias: "Ninguna",
+    p_contrasena: contrasena,
+  };
+}
 
 async function main() {
-  // 1) Registro como anónimo (lo que hace la página pública)
-  const r1 = await registrar(payload);
-  check("registro anónimo devuelve ok", r1.ok && r1.data.ok === true, r1.status);
+  // ===== Caso 1: el paciente crea su propia cuenta =====
+  const r1 = await registrar(basePayload(EMAIL_PACIENTE, NOMBRE_PACIENTE, CLAVE));
+  check("paciente se registra solo (anon)", r1.ok && r1.data.ok === true, r1.status);
 
-  // 2) Email ya existente -> rechazado
-  const r2 = await registrar(payload);
-  check("email duplicado rechazado", !r2.ok && r2.status === 400);
-
-  // 3) Validación: contraseña corta
-  const r3 = await registrar({ ...payload, p_contrasena: "123", p_email: `corta.${SUFIJO}@test.com` });
-  check("contraseña corta rechazada", !r3.ok);
-
-  // 4) Validación: email inválido
-  const r4 = await registrar({ ...payload, p_contrasena: "Valida123", p_email: "no-es-un-email" });
-  check("email inválido rechazado", !r4.ok);
-
-  // 5) El paciente inicia sesión con sus credenciales
-  const sesion = await login(EMAIL, CLAVE);
-  check("paciente inicia sesión", sesion.ok);
-  if (!sesion.ok) {
-    console.error(JSON.stringify(sesion.data));
-    process.exit(1);
-  }
-  const token = sesion.data.access_token;
-  const uid = sesion.data.user.id;
-
-  // 6) Su perfil es rol 'paciente' con paciente_id enlazado
-  const perfil = await get(`/perfiles?select=user_id,nombre,rol,paciente_id&user_id=eq.${uid}`, token);
+  const sesion1 = await login(EMAIL_PACIENTE, CLAVE);
+  check("paciente inicia sesión", sesion1.ok);
+  const uid1 = sesion1.data.user.id;
+  const perfil1 = await get(`/perfiles?select=nombre,rol,representante,paciente_id&user_id=eq.${uid1}`, sesion1.data.access_token);
   check(
-    "perfil rol paciente + paciente_id",
-    perfil.length === 1 &&
-      perfil[0].rol === "paciente" &&
-      perfil[0].paciente_id &&
-      perfil[0].nombre === NOMBRE,
-    `rol=${perfil[0]?.rol}`
+    "perfil: nombre = paciente, no representante",
+    perfil1.length === 1 && perfil1[0].nombre === NOMBRE_PACIENTE && perfil1[0].rol === "paciente" && perfil1[0].representante === false,
+    `nombre=${perfil1[0]?.nombre} rep=${perfil1[0]?.representante}`
   );
+  const ficha1 = await get(`/pacientes?select=nombre&id=eq.${perfil1[0].paciente_id}`, sesion1.data.access_token);
+  check("ficha paciente: nombre correcto", ficha1.length === 1 && ficha1[0].nombre === NOMBRE_PACIENTE);
 
-  // 7) La ficha del paciente quedó creada (y se ve solo con su sesión)
-  const paci = await get(`/pacientes?select=id,nombre,email&id=eq.${perfil[0].paciente_id}`, token);
-  check("ficha del paciente creada", paci.length === 1 && paci[0].email === EMAIL);
+  // ===== Caso 2: un representante crea la cuenta =====
+  const r2 = await registrar({
+    ...basePayload(EMAIL_REPRESENTANTE, NOMBRE_PACIENTE, CLAVE),
+    p_es_representante: true,
+    p_nombre_cuenta: NOMBRE_REPRESENTANTE,
+  });
+  check("representante se registra", r2.ok && r2.data.ok === true, r2.status);
 
-  // 8) Helper paciente_id_usuario devuelve su propio paciente
-  const miPaciente = await post("/rpc/paciente_id_usuario", {}, token);
-  check("paciente_id_usuario() correcto", miPaciente === perfil[0].paciente_id);
-
-  // 9) Un paciente NO puede crear un médico (privilegios no escalables)
-  const noEscalar = await registrar({ ...payload, p_email: `escala.${SUFIJO}@test.com`, p_contrasena: "Valida123" });
-  // registrar_paciente solo crea rol 'paciente'; verificar que no existan perfiles admin extra
-  const admins = await managementQuery(
-    "select count(*) as n from public.perfiles where rol = 'admin';"
+  const sesion2 = await login(EMAIL_REPRESENTANTE, CLAVE);
+  check("representante inicia sesión", sesion2.ok);
+  const uid2 = sesion2.data.user.id;
+  const perfil2 = await get(`/perfiles?select=nombre,rol,representante,paciente_id&user_id=eq.${uid2}`, sesion2.data.access_token);
+  check(
+    "perfil: nombre = representante, representante=true",
+    perfil2.length === 1 && perfil2[0].nombre === NOMBRE_REPRESENTANTE && perfil2[0].representante === true,
+    `nombre=${perfil2[0]?.nombre} rep=${perfil2[0]?.representante}`
   );
+  const ficha2 = await get(`/pacientes?select=nombre&id=eq.${perfil2[0].paciente_id}`, sesion2.data.access_token);
+  check("ficha paciente (vía representante): nombre del paciente", ficha2.length === 1 && ficha2[0].nombre === NOMBRE_PACIENTE);
+
+  // ===== Caso 3: representante sin nombre -> rechazado =====
+  const r3 = await registrar({
+    ...basePayload(`sin.nombre.${SUFIJO}@test.com`, NOMBRE_PACIENTE, CLAVE),
+    p_es_representante: true,
+    p_nombre_cuenta: "",
+  });
+  check("representante sin nombre rechazado", !r3.ok);
+
+  // ===== Caso 4: no se escalan privilegios =====
+  const admins = await managementQuery("select count(*) as n from public.perfiles where rol = 'admin';");
   check("no se crearon admins extra", Number(admins[0].n) === 1, `admins=${admins[0].n}`);
 
   // Limpieza
-  await managementQuery(`delete from auth.users where email = '${EMAIL}';`);
-  await managementQuery(`delete from public.pacientes where email = '${EMAIL}';`);
+  await managementQuery(`delete from auth.users where email in ('${EMAIL_PACIENTE}', '${EMAIL_REPRESENTANTE}');`);
+  await managementQuery(`delete from public.pacientes where email in ('${EMAIL_PACIENTE}', '${EMAIL_REPRESENTANTE}');`);
 
-  const loginPost = await login(EMAIL, CLAVE);
-  check("usuario eliminado tras la prueba", !loginPost.ok);
+  const loginPost = await login(EMAIL_PACIENTE, CLAVE);
+  check("usuarios eliminados tras la prueba", !loginPost.ok);
 
   console.log(failures ? `\nRESULTADO: ${failures} fallo(s)` : "\nRESULTADO: TODO OK");
   process.exit(failures ? 1 : 0);

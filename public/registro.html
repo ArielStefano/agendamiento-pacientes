@@ -19,13 +19,24 @@
       <span class="logo">🏥</span>
       <h1>CliniAgenda</h1>
     </div>
-    <h2>Crear cuenta de paciente</h2>
-    <p class="small muted">Si es representante, ingrese los datos del paciente. El correo será su usuario para iniciar sesión.</p>
+    <h2>Crear cuenta</h2>
+    <p class="small muted">Si es representante, ingrese los datos del paciente y el suyo. El correo será su usuario para iniciar sesión.</p>
 
     <div id="alert" class="alert alert-error"></div>
     <div id="ok" class="alert alert-success"></div>
 
     <form id="registro-form">
+      <div class="field">
+        <label for="tipo_cuenta">¿Quién usa esta cuenta? *</label>
+        <select id="tipo_cuenta" name="tipo_cuenta" required>
+          <option value="paciente">El paciente mismo</option>
+          <option value="representante">Soy representante del paciente</option>
+        </select>
+      </div>
+      <div class="field hidden" id="rep-field">
+        <label for="nombre_cuenta">Nombre del representante *</label>
+        <input type="text" id="nombre_cuenta" name="nombre_cuenta" autocomplete="off" placeholder="Nombre de quien usa esta cuenta" />
+      </div>
       <div class="grid grid-2">
         <div class="field">
           <label for="nombre">Nombre del paciente *</label>
