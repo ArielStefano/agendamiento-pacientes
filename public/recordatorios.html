@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recordatorios | Agendamiento de Pacientes</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-title="Recordatorios">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div class="main">
+      <header class="topbar" id="topbar"></header>
+      <main class="content">
+        <div class="card mb-16">
+          <h4 class="mb-8">Generar recordatorio de una cita</h4>
+          <div class="flex-between" style="gap:12px">
+            <select id="sel-cita" style="flex:1"></select>
+            <button class="btn" onclick="generarRecordatorio()">🔔 Generar</button>
+          </div>
+        </div>
+        <div class="toolbar">
+          <div class="left">
+            <select id="f-estado" onchange="aplicarFiltros()">
+              <option value="">Todos los estados</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="enviado">Enviado</option>
+              <option value="fallido">Fallido</option>
+            </select>
+            <select id="f-canal" onchange="aplicarFiltros()">
+              <option value="">Todos los canales</option>
+              <option value="app">App</option>
+              <option value="email">Email</option>
+            </select>
+          </div>
+        </div>
+        <div id="tabla-recordatorios"></div>
+      </main>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="vendor/supabase.min.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/recordatorios.js"></script>
+</body>
+</html>

@@ -872,3 +872,41 @@ tbody tr:hover {
     padding: 16px;
   }
 }
+
+.mb-8 {
+  margin-bottom: 8px;
+}
+
+.inline {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.dias-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.chip input {
+  accent-color: var(--primary, #3b82f6);
+}
+
+.chip:has(input:checked) {
+  background: var(--primary, #3b82f6);
+  color: #fff;
+  border-color: var(--primary, #3b82f6);
+}

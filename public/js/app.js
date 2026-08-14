@@ -57,6 +57,8 @@ const app = {
       { href: "citas.html", icon: "🗓️", label: "Citas", show: true },
       { href: "calendario.html", icon: "📅", label: "Calendario", show: true },
       { href: "pacientes.html", icon: "🧑‍🤝‍🧑", label: "Pacientes", show: this.isAdminOrRecepcion },
+      { href: "medicos.html", icon: "🩺", label: "Médicos", show: this.user.rol === "admin" },
+      { href: "recordatorios.html", icon: "🔔", label: "Recordatorios", show: this.user.rol === "admin" },
     ];
 
     const current = window.location.pathname.split("/").pop();
