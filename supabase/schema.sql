@@ -51,6 +51,8 @@ create table if not exists public.citas (
   hora time not null,
   duracion_min int not null default 30,
   motivo text,
+  lugar text not null default 'consultorio'
+    check (lugar in ('consultorio', 'domicilio')),
   estado text not null default 'programada'
     check (estado in ('programada', 'confirmada', 'completada', 'cancelada')),
   creada_por uuid references auth.users (id),
@@ -67,6 +69,7 @@ create table if not exists public.recordatorios (
   fecha_programada timestamptz,
   estado text not null default 'pendiente'
     check (estado in ('pendiente', 'enviado', 'fallido')),
+  dirigido_a uuid references auth.users (id) on delete cascade,
   enviado_at timestamptz,
   created_at timestamptz not null default now()
 );
@@ -110,6 +113,9 @@ declare
   v_medico text;
   v_esp text;
   v_msj text;
+  v_lugar text;
+  v_creador text;
+  v_admin record;
 begin
   select p.nombre, p.email into v_paciente, v_email
   from public.pacientes p where p.id = new.paciente_id;
@@ -129,6 +135,30 @@ begin
     values (new.id, new.paciente_id, 'email', v_msj, new.fecha + new.hora, 'pendiente');
   end if;
 
+  -- Alerta inmediata para los admins cuando la cita es de la psicóloga
+  if exists (select 1 from public.medicos m where m.id = new.medico_id and m.email = 'jtoaquiza@clinica.com') then
+    v_lugar := case when new.lugar = 'domicilio' then 'a domicilio' else 'en consultorio' end;
+
+    select p.nombre into v_creador from public.perfiles p where p.user_id = new.creada_por;
+
+    for v_admin in select user_id from public.perfiles where rol = 'admin' loop
+      insert into public.recordatorios (cita_id, paciente_id, canal, mensaje, fecha_programada, estado, dirigido_a)
+      values (
+        new.id,
+        new.paciente_id,
+        'app',
+        'Nueva cita para ' || v_medico || ' (' || v_esp || '): ' || v_paciente ||
+          ' el ' || to_char(new.fecha, 'DD/MM/YYYY') ||
+          ' a las ' || to_char(new.hora, 'HH24:MI') ||
+          ' ' || v_lugar ||
+          '. Agendada por ' || coalesce(v_creador, 'el sistema') || '.',
+        now(),
+        'pendiente',
+        v_admin.user_id
+      );
+    end loop;
+  end if;
+
   return new;
 end;
 $$;
@@ -145,7 +175,8 @@ create or replace function public.crear_cita(
   p_medico uuid,
   p_fecha date,
   p_hora time,
-  p_motivo text default null
+  p_motivo text default null,
+  p_lugar text default 'consultorio'
 )
 returns public.citas
 language plpgsql security definer set search_path = public
@@ -162,6 +193,11 @@ begin
   end if;
   if public.rol_usuario() not in ('admin', 'recepcion', 'medico') then
     raise exception 'Sin permisos para crear citas';
+  end if;
+
+  if p_lugar is null then p_lugar := 'consultorio'; end if;
+  if p_lugar not in ('consultorio', 'domicilio') then
+    raise exception 'Lugar inválido (debe ser consultorio o domicilio)';
   end if;
 
   select * into v_medico from public.medicos where id = p_medico for update;
@@ -200,16 +236,16 @@ begin
     raise exception 'Horario no disponible: el médico ya tiene una cita en ese rango';
   end if;
 
-  insert into public.citas (paciente_id, medico_id, fecha, hora, duracion_min, motivo, creada_por)
-  values (p_paciente, p_medico, p_fecha, p_hora, v_dur, p_motivo, auth.uid())
+  insert into public.citas (paciente_id, medico_id, fecha, hora, duracion_min, motivo, lugar, creada_por)
+  values (p_paciente, p_medico, p_fecha, p_hora, v_dur, p_motivo, p_lugar, auth.uid())
   returning * into v_cita;
 
   return v_cita;
 end;
 $$;
 
-grant execute on function public.crear_cita(uuid, uuid, date, time, text) to authenticated;
-revoke all on function public.crear_cita(uuid, uuid, date, time, text) from public;
+grant execute on function public.crear_cita(uuid, uuid, date, time, text, text) to authenticated;
+revoke all on function public.crear_cita(uuid, uuid, date, time, text, text) from public;
 
 -- ---------- RPC: reprogramar cita (valida disponibilidad) ----------
 
@@ -219,7 +255,8 @@ create or replace function public.actualizar_cita(
   p_medico uuid,
   p_fecha date,
   p_hora time,
-  p_motivo text default null
+  p_motivo text default null,
+  p_lugar text default 'consultorio'
 )
 returns public.citas
 language plpgsql security definer set search_path = public
@@ -234,6 +271,11 @@ declare
 begin
   if public.rol_usuario() not in ('admin', 'recepcion') then
     raise exception 'Sin permisos para reprogramar citas';
+  end if;
+
+  if p_lugar is null then p_lugar := 'consultorio'; end if;
+  if p_lugar not in ('consultorio', 'domicilio') then
+    raise exception 'Lugar inválido (debe ser consultorio o domicilio)';
   end if;
 
   select * into v_cita_actual from public.citas where id = p_id;
@@ -280,7 +322,7 @@ begin
 
   update public.citas
   set paciente_id = p_paciente, medico_id = p_medico, fecha = p_fecha, hora = p_hora,
-      duracion_min = v_dur, motivo = p_motivo, updated_at = now()
+      duracion_min = v_dur, motivo = p_motivo, lugar = p_lugar, updated_at = now()
   where id = p_id
   returning * into v_cita;
 
@@ -288,8 +330,8 @@ begin
 end;
 $$;
 
-grant execute on function public.actualizar_cita(uuid, uuid, uuid, date, time, text) to authenticated;
-revoke all on function public.actualizar_cita(uuid, uuid, uuid, date, time, text) from public;
+grant execute on function public.actualizar_cita(uuid, uuid, uuid, date, time, text, text) to authenticated;
+revoke all on function public.actualizar_cita(uuid, uuid, uuid, date, time, text, text) from public;
 
 -- ---------- RPC: cambiar estado ----------
 
@@ -363,9 +405,12 @@ create policy "citas_sel" on public.citas for select to authenticated
 create policy "citas_del" on public.citas for delete to authenticated
   using (public.rol_usuario() in ('admin', 'recepcion'));
 
--- recordatorios: lectura y marcado como leído para autenticados
-create policy "recordatorios_sel" on public.recordatorios for select to authenticated using (true);
-create policy "recordatorios_upd" on public.recordatorios for update to authenticated using (true);
+-- recordatorios: lectura y marcado como leído según destinatario
+-- (dirigido_a NULL = visible para todos; no NULL = solo ese usuario)
+create policy "recordatorios_sel" on public.recordatorios for select to authenticated
+  using (dirigido_a is null or dirigido_a = auth.uid());
+create policy "recordatorios_upd" on public.recordatorios for update to authenticated
+  using (dirigido_a is null or dirigido_a = auth.uid());
 
 -- ---------- Grants ----------
 

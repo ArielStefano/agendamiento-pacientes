@@ -58,7 +58,7 @@ async function cargarSemana() {
 
   const res = await supabase
     .from("citas")
-    .select("id, fecha, hora, motivo, estado, pacientes(id, nombre, telefono)")
+    .select("id, fecha, hora, motivo, lugar, estado, pacientes(id, nombre, telefono)")
     .eq("medico_id", medicoId)
     .gte("fecha", inicio)
     .lte("fecha", fin)
@@ -108,7 +108,7 @@ function renderCalendario(medico, citas) {
       const eventos = porDia(fecha).filter((c) => app.hhmm(c.hora) === hora);
       let cellHtml = "";
       for (const c of eventos) {
-        cellHtml += `<div class="cal-event ${c.estado}" onclick='verDetalle(${JSON.stringify(c).replace(/'/g, "\\u0027")})' title="${esc((c.pacientes && c.pacientes.nombre) || "")} — ${esc(c.motivo || "")}">${app.hhmm(c.hora)} · ${esc((c.pacientes && c.pacientes.nombre) || "")}</div>`;
+        cellHtml += `<div class="cal-event ${c.estado}" onclick='verDetalle(${JSON.stringify(c).replace(/'/g, "\\u0027")})' title="${esc((c.pacientes && c.pacientes.nombre) || "")} — ${esc(c.motivo || "")}">${app.hhmm(c.hora)} · ${c.lugar === "domicilio" ? "🏠" : "🏥"} ${esc((c.pacientes && c.pacientes.nombre) || "")}</div>`;
       }
       if (!cellHtml && !diasAtencion.includes(DIAS[i].toLowerCase())) {
         html += `<div class="cal-cell" style="background:#f8fafc"></div>`;
@@ -139,6 +139,7 @@ function verDetalle(cita) {
       <div class="field"><label>Teléfono</label><div>${esc(paciente.telefono || "-")}</div></div>
       <div class="field"><label>Fecha</label><div>${app.formatFechaLarga(cita.fecha)}</div></div>
       <div class="field"><label>Hora</label><div>${app.hhmm(cita.hora)}</div></div>
+      <div class="field"><label>Lugar</label><div>${cita.lugar === "domicilio" ? "🏠 A domicilio" : "🏥 En consultorio"}</div></div>
       <div class="field"><label>Motivo</label><div>${esc(cita.motivo || "-")}</div></div>
       <div class="field"><label>Estado</label><div><span class="badge ${cita.estado}">${cita.estado}</span></div></div>
     </div>

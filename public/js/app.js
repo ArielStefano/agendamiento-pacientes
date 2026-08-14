@@ -107,6 +107,7 @@ const app = {
         .select("id, mensaje, fecha_programada, pacientes(nombre)")
         .eq("canal", "app")
         .eq("estado", "pendiente")
+        .or(`dirigido_a.is.null,dirigido_a.eq.${this.user.id}`)
         .order("fecha_programada", { ascending: true })
         .limit(50);
 
@@ -140,7 +141,8 @@ const app = {
       .from("recordatorios")
       .update({ estado: "enviado", enviado_at: new Date().toISOString() })
       .eq("canal", "app")
-      .eq("estado", "pendiente");
+      .eq("estado", "pendiente")
+      .or(`dirigido_a.is.null,dirigido_a.eq.${this.user.id}`);
     this.loadNotifications();
     toast("Notificaciones marcadas como leídas", "success");
   },

@@ -46,7 +46,7 @@ async function initCitas() {
 async function aplicarFiltros() {
   let query = supabase
     .from("citas")
-    .select("id, fecha, hora, motivo, estado, pacientes(id, nombre, telefono), medicos(id, nombre, especialidad)")
+    .select("id, fecha, hora, motivo, lugar, estado, pacientes(id, nombre, telefono), medicos(id, nombre, especialidad)")
     .order("fecha", { ascending: true })
     .order("hora", { ascending: true });
 
@@ -98,6 +98,7 @@ function renderTabla() {
         <td><strong>${app.hhmm(c.hora)}</strong></td>
         <td>${esc((c.pacientes && c.pacientes.nombre) || "")}</td>
         <td>${esc((c.medicos && c.medicos.nombre) || "")} <span class="muted small">(${esc((c.medicos && c.medicos.especialidad) || "")})</span></td>
+        <td>${c.lugar === "domicilio" ? "🏠 Domicilio" : "🏥 Consultorio"}</td>
         <td>${esc(c.motivo || "-")}</td>
         <td><span class="badge ${c.estado}">${c.estado}</span></td>
         <td>
@@ -112,7 +113,7 @@ function renderTabla() {
       <table>
         <thead>
           <tr>
-            <th>Fecha</th><th>Hora</th><th>Paciente</th><th>Médico</th><th>Motivo</th><th>Estado</th><th>Acciones</th>
+            <th>Fecha</th><th>Hora</th><th>Paciente</th><th>Médico</th><th>Lugar</th><th>Motivo</th><th>Estado</th><th>Acciones</th>
           </tr>
         </thead>
         <tbody>${filas}</tbody>
@@ -124,6 +125,7 @@ async function abrirModalCita(cita = null) {
   document.getElementById("cita-titulo").textContent = cita ? "Editar cita" : "Nueva cita";
   document.getElementById("c-id").value = cita ? cita.id : "";
   document.getElementById("c-motivo").value = cita ? cita.motivo || "" : "";
+  document.getElementById("c-lugar").value = cita ? cita.lugar || "consultorio" : "consultorio";
   slotSeleccionado = null;
 
   if (cita) {
@@ -228,6 +230,7 @@ async function guardarCita() {
   const paciente = document.getElementById("c-paciente").value;
   const medico = document.getElementById("c-medico").value;
   const motivo = document.getElementById("c-motivo").value || null;
+  const lugar = document.getElementById("c-lugar").value || "consultorio";
 
   if (!paciente) return toast("Seleccione un paciente", "error");
   if (!medico) return toast("Seleccione un médico", "error");
@@ -245,6 +248,7 @@ async function guardarCita() {
       p_fecha: fecha,
       p_hora: hora,
       p_motivo: motivo,
+      p_lugar: lugar,
     });
     error = e;
     if (!error) toast("Cita actualizada", "success");
@@ -255,6 +259,7 @@ async function guardarCita() {
       p_fecha: fecha,
       p_hora: hora,
       p_motivo: motivo,
+      p_lugar: lugar,
     });
     error = e;
     if (!error) toast("Cita creada correctamente", "success");
