@@ -5,6 +5,7 @@ const BASE = self.registration.scope;
 
 const STATIC = [
   "index.html",
+  "registro.html",
   "dashboard.html",
   "citas.html",
   "calendario.html",

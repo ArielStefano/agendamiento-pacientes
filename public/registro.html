@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registro de pacientes | Agendamiento de Pacientes</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-180.png" />
+  <meta name="theme-color" content="#0ea5e9" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Clínica Salud" />
+</head>
+<body class="login-body">
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="logo">🏥</span>
+      <h1>Clínica de Salud</h1>
+    </div>
+    <h2>Crear cuenta de paciente</h2>
+    <p class="small muted">Si es representante, ingrese los datos del paciente. El correo será su usuario para iniciar sesión.</p>
+
+    <div id="alert" class="alert alert-error"></div>
+    <div id="ok" class="alert alert-success"></div>
+
+    <form id="registro-form">
+      <div class="grid grid-2">
+        <div class="field">
+          <label for="nombre">Nombre del paciente *</label>
+          <input type="text" id="nombre" name="nombre" required autocomplete="off" placeholder="Nombre completo" />
+        </div>
+        <div class="field">
+          <label for="documento">Documento</label>
+          <input type="text" id="documento" name="documento" autocomplete="off" placeholder="Cédula / pasaporte" />
+        </div>
+        <div class="field">
+          <label for="fecha_nacimiento">Fecha de nacimiento</label>
+          <input type="date" id="fecha_nacimiento" name="fecha_nacimiento" />
+        </div>
+        <div class="field">
+          <label for="telefono">Teléfono</label>
+          <input type="tel" id="telefono" name="telefono" autocomplete="off" placeholder="Ej. 099 123 4567" />
+        </div>
+        <div class="field">
+          <label for="direccion">Dirección</label>
+          <input type="text" id="direccion" name="direccion" autocomplete="off" placeholder="Calle y número" />
+        </div>
+        <div class="field">
+          <label for="alergias">Alergias</label>
+          <input type="text" id="alergias" name="alergias" autocomplete="off" placeholder="Ej. penicilina, ninguna" />
+        </div>
+      </div>
+      <div class="grid grid-2">
+        <div class="field">
+          <label for="email">Correo electrónico *</label>
+          <input type="email" id="email" name="email" required autocomplete="username" placeholder="usuario@ejemplo.com" />
+        </div>
+        <div class="field">
+          <label for="contrasena">Contraseña *</label>
+          <input type="password" id="contrasena" name="contrasena" required minlength="6" autocomplete="new-password" placeholder="Mínimo 6 caracteres" />
+        </div>
+      </div>
+      <button type="submit" id="btn-registro" class="btn btn-block">Crear cuenta</button>
+    </form>
+
+    <p class="small muted text-center mt-8">
+      ¿Ya tiene cuenta? <a href="index.html">Iniciar sesión</a>
+    </p>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="vendor/supabase.min.js"></script>
+  <script src="js/registro.js"></script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>
