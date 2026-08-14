@@ -1,6 +1,6 @@
 {
-  "name": "Clínica de Salud - Agendamiento de Pacientes",
-  "short_name": "Clínica Salud",
+  "name": "CliniAgenda - Agendamiento de Pacientes",
+  "short_name": "CliniAgenda",
   "description": "Sistema de agendamiento de pacientes, médicos y recordatorios",
   "lang": "es",
   "id": "./",

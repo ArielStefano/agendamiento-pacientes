@@ -4,7 +4,7 @@ function setupLayout(title) {
   const sidebar = document.getElementById("sidebar");
   if (sidebar) {
     sidebar.innerHTML = `
-      <div class="brand"><span class="logo">🏥</span><span>Clínica de Salud</span></div>
+      <div class="brand"><span class="logo">🏥</span><span>CliniAgenda</span></div>
       <nav id="sidebar-nav"></nav>
       <div class="user-box" id="user-box"></div>
     `;

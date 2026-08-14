@@ -1,6 +1,6 @@
 // Service Worker: cache de la app para que sea instalable y funcione sin red
 // Cambiar CACHE solo en releases que rompan compatibilidad con caché antigua.
-const CACHE = "clinica-pwa-v1";
+const CACHE = "cliniagenda-pwa-v1";
 const BASE = self.registration.scope;
 
 const STATIC = [
