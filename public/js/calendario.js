@@ -95,16 +95,15 @@ function renderCalendario(medico, citas) {
     minFinSab = Number(medico.hora_fin_sabado.slice(3, 5));
   }
 
-  // Slots de tiempo: unir ambos rangos (sin duplicados)
+  // Slots de tiempo: unir ambos rangos (sin duplicados), usando la duración del médico
+  const dur = medico.duracion_cita_min || 30;
   const horasSet = new Set();
   function agregarRango(hIni, mIni, hFin, mFin) {
-    for (let h = hIni; h <= hFin; h++) {
-      for (const m of h === hIni ? [mIni, 30] : [0, 30]) {
-        if (h === hFin && m > mFin) continue;
-        if (h * 60 + m >= hIni * 60 + mIni && h * 60 + m < hFin * 60 + mFin) {
-          horasSet.add(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
-        }
-      }
+    let t = hIni * 60 + mIni;
+    const fin = hFin * 60 + mFin;
+    while (t + dur <= fin) {
+      horasSet.add(`${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`);
+      t += dur;
     }
   }
   agregarRango(horaIni, minIni, horaFin, minFin);
