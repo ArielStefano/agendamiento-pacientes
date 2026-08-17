@@ -17,6 +17,8 @@ create table if not exists public.medicos (
   hora_inicio time not null default '08:00:00',
   hora_fin time not null default '17:00:00',
   duracion_cita_min int not null default 30,
+  hora_inicio_sabado time,
+  hora_fin_sabado time,
   created_at timestamptz not null default now()
 );
 
@@ -200,6 +202,8 @@ declare
   v_cita public.citas;
   v_rol text;
   v_estado text;
+  v_hora_inicio time;
+  v_hora_fin time;
 begin
   v_rol := public.rol_usuario();
   if v_rol is null then
@@ -244,10 +248,19 @@ begin
 
   v_dur := v_medico.duracion_cita_min;
 
-  if p_hora < v_medico.hora_inicio
-     or p_hora + v_dur * interval '1 minute' > v_medico.hora_fin then
+  -- Usar horario de sábado si aplica
+  if v_dia = 'Sabado' and v_medico.hora_inicio_sabado is not null and v_medico.hora_fin_sabado is not null then
+    v_hora_inicio := v_medico.hora_inicio_sabado;
+    v_hora_fin    := v_medico.hora_fin_sabado;
+  else
+    v_hora_inicio := v_medico.hora_inicio;
+    v_hora_fin    := v_medico.hora_fin;
+  end if;
+
+  if p_hora < v_hora_inicio
+     or p_hora + v_dur * interval '1 minute' > v_hora_fin then
     raise exception 'La cita debe estar dentro del horario del médico (%)',
-      v_medico.hora_inicio || ' - ' || v_medico.hora_fin;
+      v_hora_inicio || ' - ' || v_hora_fin;
   end if;
 
   select count(*) into v_conflicto
@@ -292,6 +305,8 @@ declare
   v_dur int;
   v_conflicto int;
   v_cita public.citas;
+  v_hora_inicio time;
+  v_hora_fin time;
 begin
   if public.rol_usuario() not in ('admin', 'recepcion') then
     raise exception 'Sin permisos para reprogramar citas';
@@ -327,10 +342,19 @@ begin
 
   v_dur := v_medico.duracion_cita_min;
 
-  if p_hora < v_medico.hora_inicio
-     or p_hora + v_dur * interval '1 minute' > v_medico.hora_fin then
+  -- Usar horario de sábado si aplica
+  if v_dia = 'Sabado' and v_medico.hora_inicio_sabado is not null and v_medico.hora_fin_sabado is not null then
+    v_hora_inicio := v_medico.hora_inicio_sabado;
+    v_hora_fin    := v_medico.hora_fin_sabado;
+  else
+    v_hora_inicio := v_medico.hora_inicio;
+    v_hora_fin    := v_medico.hora_fin;
+  end if;
+
+  if p_hora < v_hora_inicio
+     or p_hora + v_dur * interval '1 minute' > v_hora_fin then
     raise exception 'La cita debe estar dentro del horario del médico (%)',
-      v_medico.hora_inicio || ' - ' || v_medico.hora_fin;
+      v_hora_inicio || ' - ' || v_hora_fin;
   end if;
 
   select count(*) into v_conflicto
@@ -462,7 +486,9 @@ create or replace function public.crear_medico_admin(
   p_hora_inicio time,
   p_hora_fin time,
   p_duracion int,
-  p_contrasena text
+  p_contrasena text,
+  p_hora_inicio_sabado time default null,
+  p_hora_fin_sabado time default null
 )
 returns jsonb
 language plpgsql security definer set search_path = public
@@ -491,6 +517,15 @@ begin
     raise exception 'Día de atención inválido (Lunes, Martes, Miercoles, Jueves, Viernes, Sabado, Domingo)';
   end if;
 
+  if p_hora_inicio_sabado is not null and p_hora_fin_sabado is not null then
+    if p_hora_inicio_sabado >= p_hora_fin_sabado then
+      raise exception 'El horario de sábado: inicio debe ser anterior a fin';
+    end if;
+    if not ('Sabado'::text = any(v_dias)) then
+      raise exception 'Si configura horario de sábado, debe incluir el sábado en los días de atención';
+    end if;
+  end if;
+
   if exists (select 1 from auth.users u where lower(u.email) = v_email) then
     raise exception 'Ya existe un usuario con ese email';
   end if;
@@ -510,8 +545,10 @@ begin
   values (v_user_id, v_user_id, v_user_id,
           jsonb_build_object('sub', v_user_id, 'email', v_email), 'email', now(), now(), now());
 
-  insert into public.medicos (nombre, especialidad, telefono, email, dias_atencion, hora_inicio, hora_fin, duracion_cita_min)
-  values (trim(p_nombre), trim(p_especialidad), p_telefono, v_email, p_dias, p_hora_inicio, p_hora_fin, p_duracion)
+  insert into public.medicos (nombre, especialidad, telefono, email, dias_atencion,
+    hora_inicio, hora_fin, duracion_cita_min, hora_inicio_sabado, hora_fin_sabado)
+  values (trim(p_nombre), trim(p_especialidad), p_telefono, v_email, p_dias,
+    p_hora_inicio, p_hora_fin, p_duracion, p_hora_inicio_sabado, p_hora_fin_sabado)
   returning id into v_medico_id;
 
   insert into public.perfiles (user_id, nombre, rol, medico_id)
@@ -521,8 +558,8 @@ begin
 end;
 $$;
 
-grant execute on function public.crear_medico_admin(text, text, text, text, jsonb, time, time, int, text) to authenticated;
-revoke all on function public.crear_medico_admin(text, text, text, text, jsonb, time, time, int, text) from public;
+grant execute on function public.crear_medico_admin(text, text, text, text, jsonb, time, time, int, text, time, time) to authenticated;
+revoke all on function public.crear_medico_admin(text, text, text, text, jsonb, time, time, int, text, time, time) from public;
 
 -- Edita médico (puede cambiar email y contraseña de acceso)
 create or replace function public.actualizar_medico_admin(
@@ -535,7 +572,9 @@ create or replace function public.actualizar_medico_admin(
   p_hora_inicio time,
   p_hora_fin time,
   p_duracion int,
-  p_contrasena text default null
+  p_contrasena text default null,
+  p_hora_inicio_sabado time default null,
+  p_hora_fin_sabado time default null
 )
 returns jsonb
 language plpgsql security definer set search_path = public
@@ -561,6 +600,15 @@ begin
   if v_dias is null or array_length(v_dias, 1) is null then raise exception 'Seleccione al menos un día de atención'; end if;
   if exists (select 1 from unnest(v_dias) d where d not in ('Lunes','Martes','Miercoles','Jueves','Viernes','Sabado','Domingo')) then
     raise exception 'Día de atención inválido';
+  end if;
+
+  if p_hora_inicio_sabado is not null and p_hora_fin_sabado is not null then
+    if p_hora_inicio_sabado >= p_hora_fin_sabado then
+      raise exception 'El horario de sábado: inicio debe ser anterior a fin';
+    end if;
+    if not ('Sabado'::text = any(v_dias)) then
+      raise exception 'Si configura horario de sábado, debe incluir el sábado en los días de atención';
+    end if;
   end if;
 
   select m.email, p.user_id into v_antiguo, v_user_id
@@ -593,7 +641,8 @@ begin
   update public.medicos
   set nombre = trim(p_nombre), especialidad = trim(p_especialidad), telefono = p_telefono,
       email = v_email, dias_atencion = p_dias, hora_inicio = p_hora_inicio, hora_fin = p_hora_fin,
-      duracion_cita_min = p_duracion
+      duracion_cita_min = p_duracion,
+      hora_inicio_sabado = p_hora_inicio_sabado, hora_fin_sabado = p_hora_fin_sabado
   where id = p_id;
 
   update public.perfiles set nombre = trim(p_nombre) where medico_id = p_id;
@@ -602,8 +651,8 @@ begin
 end;
 $$;
 
-grant execute on function public.actualizar_medico_admin(uuid, text, text, text, text, jsonb, time, time, int, text) to authenticated;
-revoke all on function public.actualizar_medico_admin(uuid, text, text, text, text, jsonb, time, time, int, text) from public;
+grant execute on function public.actualizar_medico_admin(uuid, text, text, text, text, jsonb, time, time, int, text, time, time) to authenticated;
+revoke all on function public.actualizar_medico_admin(uuid, text, text, text, text, jsonb, time, time, int, text, time, time) from public;
 
 -- Elimina médico (solo si no tiene citas) junto con su usuario de acceso
 create or replace function public.eliminar_medico_admin(p_id uuid)
@@ -756,3 +805,97 @@ $$;
 -- Accesible por cualquiera (página pública de registro) y por usuarios autenticados
 grant execute on function public.registrar_paciente(text, boolean, text, text, text, text, date, text, text, text) to anon, authenticated;
 revoke all on function public.registrar_paciente(text, boolean, text, text, text, text, date, text, text, text) from public;
+
+-- ---------- Pacientes: gestión admin (CRUD) ----------
+
+create or replace function public.crear_paciente_admin(
+  p_nombre text,
+  p_documento text,
+  p_email text,
+  p_telefono text,
+  p_fecha_nacimiento date,
+  p_direccion text,
+  p_alergias text,
+  p_notas text
+)
+returns jsonb
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_id uuid;
+begin
+  if public.rol_usuario() <> 'admin' then
+    raise exception 'Solo el administrador puede crear pacientes';
+  end if;
+
+  if p_nombre is null or trim(p_nombre) = '' then
+    raise exception 'El nombre es obligatorio';
+  end if;
+
+  if p_documento is not null and trim(p_documento) <> ''
+     and exists (select 1 from public.pacientes where lower(documento) = lower(trim(p_documento))) then
+    raise exception 'Ya existe un paciente con ese documento';
+  end if;
+
+  insert into public.pacientes (nombre, documento, email, telefono, fecha_nacimiento, direccion, alergias, notas)
+  values (trim(p_nombre), nullif(trim(p_documento), ''), nullif(trim(p_email), ''), p_telefono,
+          p_fecha_nacimiento, p_direccion, p_alergias, p_notas)
+  returning id into v_id;
+
+  return jsonb_build_object('ok', true, 'id', v_id);
+end;
+$$;
+
+grant execute on function public.crear_paciente_admin(text, text, text, text, date, text, text, text) to authenticated;
+revoke all on function public.crear_paciente_admin(text, text, text, text, date, text, text, text) from public;
+
+create or replace function public.actualizar_paciente_admin(
+  p_id uuid,
+  p_nombre text,
+  p_documento text,
+  p_email text,
+  p_telefono text,
+  p_fecha_nacimiento date,
+  p_direccion text,
+  p_alergias text,
+  p_notas text
+)
+returns jsonb
+language plpgsql security definer set search_path = public
+as $$
+begin
+  if public.rol_usuario() <> 'admin' then
+    raise exception 'Solo el administrador puede editar pacientes';
+  end if;
+
+  if p_nombre is null or trim(p_nombre) = '' then
+    raise exception 'El nombre es obligatorio';
+  end if;
+
+  if p_documento is not null and trim(p_documento) <> ''
+     and exists (select 1 from public.pacientes where lower(documento) = lower(trim(p_documento)) and id <> p_id) then
+    raise exception 'Ya existe otro paciente con ese documento';
+  end if;
+
+  update public.pacientes
+  set nombre = trim(p_nombre),
+      documento = nullif(trim(p_documento), ''),
+      email = nullif(trim(p_email), ''),
+      telefono = p_telefono,
+      fecha_nacimiento = p_fecha_nacimiento,
+      direccion = p_direccion,
+      alergias = p_alergias,
+      notas = p_notas,
+      updated_at = now()
+  where id = p_id;
+
+  if not found then
+    raise exception 'Paciente no encontrado';
+  end if;
+
+  return jsonb_build_object('ok', true, 'id', p_id);
+end;
+$$;
+
+grant execute on function public.actualizar_paciente_admin(uuid, text, text, text, text, date, text, text, text) to authenticated;
+revoke all on function public.actualizar_paciente_admin(uuid, text, text, text, text, date, text, text, text) from public;

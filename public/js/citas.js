@@ -215,8 +215,17 @@ function calcularSlots(medico, fecha, citas) {
   if (!dias.includes(diaSemana)) return [];
 
   const dur = medico.duracion_cita_min || 30;
-  const inicio = toMin(medico.hora_inicio);
-  const fin = toMin(medico.hora_fin);
+
+  // Usar horario de sábado si aplica
+  let inicio, fin;
+  if (diaSemana === "Sabado" && medico.hora_inicio_sabado && medico.hora_fin_sabado) {
+    inicio = toMin(medico.hora_inicio_sabado);
+    fin = toMin(medico.hora_fin_sabado);
+  } else {
+    inicio = toMin(medico.hora_inicio);
+    fin = toMin(medico.hora_fin);
+  }
+
   const ocupados = citas.map((c) => ({ i: toMin(c.hora), f: toMin(c.hora) + c.duracion_min }));
 
   const slots = [];

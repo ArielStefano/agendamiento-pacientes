@@ -25,6 +25,15 @@ function fmtHorario(ini, fin) {
   return `${app.hhmm(ini)} — ${app.hhmm(fin)}`;
 }
 
+function fmtAgenda(m) {
+  const dias = (m.dias_atencion || []);
+  const principal = `${fmtHorario(m.hora_inicio, m.hora_fin)}`;
+  const sabado = m.hora_inicio_sabado && m.hora_fin_sabado
+    ? ` | Sáb: ${fmtHorario(m.hora_inicio_sabado, m.hora_fin_sabado)}`
+    : "";
+  return `${esc(dias.join(", "))}<br>${principal}${sabado} · ${m.duracion_cita_min} min`;
+}
+
 function renderTabla() {
   const el = document.getElementById("tabla-medicos");
   if (!listaMedicos.length) {
@@ -35,14 +44,13 @@ function renderTabla() {
   const filas = listaMedicos
     .map((m) => {
       const totalCitas = (m.citas && m.citas.length && m.citas[0].count) || 0;
-      const dias = (m.dias_atencion || []).join(", ");
       return `
       <tr>
         <td><strong>${esc(m.nombre)}</strong></td>
         <td>${esc(m.especialidad)}</td>
         <td>${esc(m.telefono || "-")}</td>
         <td>${esc(m.email || "-")}</td>
-        <td class="small muted">${esc(dias || "-")}<br>${fmtHorario(m.hora_inicio, m.hora_fin)} · ${m.duracion_cita_min} min</td>
+        <td class="small muted">${fmtAgenda(m)}</td>
         <td><span class="pill">${totalCitas} citas</span></td>
         <td>
           <div class="row-actions">
@@ -91,14 +99,46 @@ function abrirModalMedico(medico = null) {
     : "Contraseña de acceso *";
 
   document.querySelectorAll(".dias-grid input[type=checkbox]").forEach((cb) => {
-    cb.checked = medico ? (medico.dias_atencion || []).includes(cb.value) : false;
+    cb.checked = medico ? (medico.dias_atencion || []).includes(cb.value) : ["Lunes","Martes","Miercoles","Jueves","Viernes"].includes(cb.value);
   });
+
+  // Horario sábado
+  const tieneSabado = medico && medico.hora_inicio_sabado && medico.hora_fin_sabado;
+  const sabadoToggle = document.getElementById("m-sabado-toggle");
+  const sabadoFields = document.getElementById("m-sabado-fields");
+  const chkSabado = document.getElementById("m-chk-sabado");
+
+  if (tieneSabado) {
+    sabadoToggle.checked = true;
+    sabadoFields.style.display = "";
+    chkSabado.checked = true;
+    document.getElementById("m-inicio-sabado").value = app.hhmm(medico.hora_inicio_sabado);
+    document.getElementById("m-fin-sabado").value = app.hhmm(medico.hora_fin_sabado);
+  } else {
+    sabadoToggle.checked = false;
+    sabadoFields.style.display = "none";
+    chkSabado.checked = medico ? (medico.dias_atencion || []).includes("Sabado") : false;
+    document.getElementById("m-inicio-sabado").value = "08:00";
+    document.getElementById("m-fin-sabado").value = "12:00";
+  }
 
   document.getElementById("modal").classList.add("open");
 }
 
 function cerrarModal() {
   document.getElementById("modal").classList.remove("open");
+}
+
+function toggleSabado() {
+  const on = document.getElementById("m-sabado-toggle").checked;
+  document.getElementById("m-sabado-fields").style.display = on ? "" : "none";
+  const chk = document.getElementById("m-chk-sabado");
+  if (on) {
+    chk.checked = true;
+    chk.disabled = true;
+  } else {
+    chk.disabled = false;
+  }
 }
 
 function editarMedico(id) {
@@ -122,11 +162,21 @@ async function guardarMedico() {
   const fin = document.getElementById("m-fin").value + ":00";
   const dias = diasSeleccionados();
 
+  // Horario sábado
+  const sabadoOn = document.getElementById("m-sabado-toggle").checked;
+  let hora_inicio_sabado = null;
+  let hora_fin_sabado = null;
+  if (sabadoOn) {
+    hora_inicio_sabado = document.getElementById("m-inicio-sabado").value + ":00";
+    hora_fin_sabado = document.getElementById("m-fin-sabado").value + ":00";
+  }
+
   if (!nombre) return toast("El nombre es obligatorio", "error");
   if (!especialidad) return toast("La especialidad es obligatoria", "error");
   if (!email) return toast("El email es obligatorio", "error");
   if (!dias.length) return toast("Seleccione al menos un día de atención", "error");
   if (inicio >= fin) return toast("La hora de inicio debe ser anterior a la de fin", "error");
+  if (sabadoOn && hora_inicio_sabado >= hora_fin_sabado) return toast("Horario sábado: inicio debe ser anterior a fin", "error");
 
   let error = null;
   let datos = null;
@@ -142,6 +192,8 @@ async function guardarMedico() {
       p_hora_inicio: inicio,
       p_hora_fin: fin,
       p_duracion: duracion,
+      p_hora_inicio_sabado: hora_inicio_sabado,
+      p_hora_fin_sabado: hora_fin_sabado,
     };
     if (pass) params.p_contrasena = pass;
     ({ data: datos, error } = await supabase.rpc("actualizar_medico_admin", params));
@@ -158,6 +210,8 @@ async function guardarMedico() {
       p_hora_fin: fin,
       p_duracion: duracion,
       p_contrasena: pass,
+      p_hora_inicio_sabado: hora_inicio_sabado,
+      p_hora_fin_sabado: hora_fin_sabado,
     }));
     if (!error) {
       toast("Médico creado correctamente", "success");

@@ -79,19 +79,49 @@ function renderCalendario(medico, citas) {
 
   const diasAtencion = (medico.dias_atencion || []).map((d) => d.toLowerCase());
 
+  // Horario principal (Lun-Vie)
   const horaIni = Number(medico.hora_inicio.slice(0, 2));
   const minIni = Number(medico.hora_inicio.slice(3, 5));
   const horaFin = Number(medico.hora_fin.slice(0, 2));
   const minFin = Number(medico.hora_fin.slice(3, 5));
 
-  const horas = [];
-  for (let h = horaIni; h <= horaFin; h++) {
-    for (const m of h === horaIni ? [minIni, 30] : [0, 30]) {
-      if (h === horaFin && m > minFin) continue;
-      if (h * 60 + m >= horaIni * 60 + minIni && h * 60 + m < horaFin * 60 + minFin) {
-        horas.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+  // Horario sábado (si existe)
+  const tieneSabado = medico.hora_inicio_sabado && medico.hora_fin_sabado;
+  let horaIniSab = horaIni, minIniSab = minIni, horaFinSab = horaFin, minFinSab = minFin;
+  if (tieneSabado) {
+    horaIniSab = Number(medico.hora_inicio_sabado.slice(0, 2));
+    minIniSab = Number(medico.hora_inicio_sabado.slice(3, 5));
+    horaFinSab = Number(medico.hora_fin_sabado.slice(0, 2));
+    minFinSab = Number(medico.hora_fin_sabado.slice(3, 5));
+  }
+
+  // Slots de tiempo: unir ambos rangos (sin duplicados)
+  const horasSet = new Set();
+  function agregarRango(hIni, mIni, hFin, mFin) {
+    for (let h = hIni; h <= hFin; h++) {
+      for (const m of h === hIni ? [mIni, 30] : [0, 30]) {
+        if (h === hFin && m > mFin) continue;
+        if (h * 60 + m >= hIni * 60 + mIni && h * 60 + m < hFin * 60 + mFin) {
+          horasSet.add(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+        }
       }
     }
+  }
+  agregarRango(horaIni, minIni, horaFin, minFin);
+  if (tieneSabado) agregarRango(horaIniSab, minIniSab, horaFinSab, minFinSab);
+  const horas = Array.from(horasSet).sort();
+
+  // Para cada celda, determinar si ese día/hora es laboral
+  function esLaboralParaFecha(fecha, hora) {
+    const diaIdx = fechas.indexOf(fecha);
+    const diaNombre = DIAS[diaIdx];
+    if (!diasAtencion.includes(diaNombre.toLowerCase())) return false;
+    if (diaNombre === "Sabado" && tieneSabado) {
+      const hm = Number(hora.slice(0, 2)) * 60 + Number(hora.slice(3, 5));
+      return hm >= horaIniSab * 60 + minIniSab && hm < horaFinSab * 60 + minFinSab;
+    }
+    const hm = Number(hora.slice(0, 2)) * 60 + Number(hora.slice(3, 5));
+    return hm >= horaIni * 60 + minIni && hm < horaFin * 60 + minFin;
   }
 
   const porDia = (fecha) => citas.filter((c) => c.fecha === fecha).sort((a, b) => a.hora.localeCompare(b.hora));
@@ -106,7 +136,7 @@ function renderCalendario(medico, citas) {
     html += `<div class="cal-cell cal-time">${hora}</div>`;
     for (let i = 0; i < 7; i++) {
       const fecha = fechas[i];
-      const esLaboral = diasAtencion.includes(DIAS[i].toLowerCase());
+      const esLaboral = esLaboralParaFecha(fecha, hora);
       const esFuturo = fecha >= app.hoyISO();
       const eventos = porDia(fecha).filter((c) => app.hhmm(c.hora) === hora);
       let cellHtml = "";

@@ -93,26 +93,31 @@ function editarPaciente(id) {
 
 async function guardarPaciente() {
   const id = document.getElementById("p-id").value;
-  const body = {
-    nombre: document.getElementById("p-nombre").value,
-    documento: document.getElementById("p-documento").value || null,
-    email: document.getElementById("p-email").value || null,
-    telefono: document.getElementById("p-telefono").value || null,
-    fecha_nacimiento: document.getElementById("p-nacimiento").value || null,
-    direccion: document.getElementById("p-direccion").value || null,
-    alergias: document.getElementById("p-alergias").value || null,
-    notas: document.getElementById("p-notas").value || null,
-  };
+  const nombre = document.getElementById("p-nombre").value.trim();
+  const documento = document.getElementById("p-documento").value.trim() || null;
+  const email = document.getElementById("p-email").value.trim() || null;
+  const telefono = document.getElementById("p-telefono").value.trim() || null;
+  const fecha_nacimiento = document.getElementById("p-nacimiento").value || null;
+  const direccion = document.getElementById("p-direccion").value.trim() || null;
+  const alergias = document.getElementById("p-alergias").value.trim() || null;
+  const notas = document.getElementById("p-notas").value.trim() || null;
 
-  if (!body.nombre) return toast("El nombre es obligatorio", "error");
+  if (!nombre) return toast("El nombre es obligatorio", "error");
 
   let error = null;
   if (id) {
-    body.updated_at = new Date().toISOString();
-    ({ error } = await supabase.from("pacientes").update(body).eq("id", id));
+    ({ error } = await supabase.rpc("actualizar_paciente_admin", {
+      p_id: id, p_nombre: nombre, p_documento: documento, p_email: email,
+      p_telefono: telefono, p_fecha_nacimiento: fecha_nacimiento,
+      p_direccion: direccion, p_alergias: alergias, p_notas: notas,
+    }));
     if (!error) toast("Paciente actualizado", "success");
   } else {
-    ({ error } = await supabase.from("pacientes").insert([body]));
+    ({ error } = await supabase.rpc("crear_paciente_admin", {
+      p_nombre: nombre, p_documento: documento, p_email: email,
+      p_telefono: telefono, p_fecha_nacimiento: fecha_nacimiento,
+      p_direccion: direccion, p_alergias: alergias, p_notas: notas,
+    }));
     if (!error) toast("Paciente creado", "success");
   }
 

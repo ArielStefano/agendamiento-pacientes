@@ -66,24 +66,45 @@
           <label>Duración de cita (min) *</label>
           <input type="number" id="m-duracion" min="10" step="5" value="30" required />
         </div>
-        <div class="field">
-          <label>Hora inicio *</label>
-          <input type="time" id="m-inicio" value="08:00" required />
+      </div>
+      <div class="field">
+        <label>Horario principal (Lunes a Viernes) *</label>
+        <div class="form-row">
+          <div class="field">
+            <label class="small muted">Hora inicio</label>
+            <input type="time" id="m-inicio" value="08:00" required />
+          </div>
+          <div class="field">
+            <label class="small muted">Hora fin</label>
+            <input type="time" id="m-fin" value="17:00" required />
+          </div>
         </div>
-        <div class="field">
-          <label>Hora fin *</label>
-          <input type="time" id="m-fin" value="17:00" required />
+      </div>
+      <div class="field">
+        <label class="small">
+          <input type="checkbox" id="m-sabado-toggle" onchange="toggleSabado()" />
+          Sábado con horario diferente
+        </label>
+        <div id="m-sabado-fields" class="form-row" style="display:none; margin-top:8px;">
+          <div class="field">
+            <label class="small muted">Inicio sábado</label>
+            <input type="time" id="m-inicio-sabado" value="08:00" />
+          </div>
+          <div class="field">
+            <label class="small muted">Fin sábado</label>
+            <input type="time" id="m-fin-sabado" value="12:00" />
+          </div>
         </div>
       </div>
       <div class="field">
         <label>Días de atención *</label>
         <div class="dias-grid">
-          <label class="chip"><input type="checkbox" value="Lunes" /> Lunes</label>
-          <label class="chip"><input type="checkbox" value="Martes" /> Martes</label>
-          <label class="chip"><input type="checkbox" value="Miercoles" /> Miércoles</label>
-          <label class="chip"><input type="checkbox" value="Jueves" /> Jueves</label>
-          <label class="chip"><input type="checkbox" value="Viernes" /> Viernes</label>
-          <label class="chip"><input type="checkbox" value="Sabado" /> Sábado</label>
+          <label class="chip"><input type="checkbox" value="Lunes" checked /> Lunes</label>
+          <label class="chip"><input type="checkbox" value="Martes" checked /> Martes</label>
+          <label class="chip"><input type="checkbox" value="Miercoles" checked /> Miércoles</label>
+          <label class="chip"><input type="checkbox" value="Jueves" checked /> Jueves</label>
+          <label class="chip"><input type="checkbox" value="Viernes" checked /> Viernes</label>
+          <label class="chip sabado-chip"><input type="checkbox" value="Sabado" id="m-chk-sabado" /> Sábado</label>
           <label class="chip"><input type="checkbox" value="Domingo" /> Domingo</label>
         </div>
       </div>
