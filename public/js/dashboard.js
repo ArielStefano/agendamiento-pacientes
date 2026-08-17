@@ -31,6 +31,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       const proximas = citas.filter((c) => c.estado === "programada" || c.estado === "confirmada");
 
       document.getElementById("dashboard-content").innerHTML = `
+        ${app.isAdminOrRecepcion ? `
+        <div class="flex-between mb-16">
+          <div></div>
+          <a href="citas.html?nueva=true" class="btn">➕ Nueva cita</a>
+        </div>` : ""}
         <div class="grid grid-4 mb-16">
           <div class="card stat-card">
             <div class="icon">🗓️</div>

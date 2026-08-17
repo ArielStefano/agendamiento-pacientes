@@ -321,4 +321,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("modal-cita").addEventListener("click", (e) => {
     if (e.target === document.getElementById("modal-cita")) cerrarModalCita();
   });
+
+  // Auto-abrir modal de nueva cita si se llega con ?nueva=true
+  if (new URLSearchParams(window.location.search).get("nueva") === "true") {
+    setTimeout(() => abrirModalCita(), 300);
+  }
 });
