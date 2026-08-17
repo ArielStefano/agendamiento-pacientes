@@ -3,6 +3,7 @@
 const DIAS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo"];
 let semanaInicio = inicioSemana(new Date());
 let listaMedicos = [];
+let slotSeleccionado = null;
 
 function inicioSemana(d) {
   const date = new Date(d);
@@ -105,13 +106,17 @@ function renderCalendario(medico, citas) {
     html += `<div class="cal-cell cal-time">${hora}</div>`;
     for (let i = 0; i < 7; i++) {
       const fecha = fechas[i];
+      const esLaboral = diasAtencion.includes(DIAS[i].toLowerCase());
+      const esFuturo = fecha >= app.hoyISO();
       const eventos = porDia(fecha).filter((c) => app.hhmm(c.hora) === hora);
       let cellHtml = "";
       for (const c of eventos) {
         cellHtml += `<div class="cal-event ${c.estado}" onclick='verDetalle(${JSON.stringify(c).replace(/'/g, "\\u0027")})' title="${esc((c.pacientes && c.pacientes.nombre) || "")} — ${esc(c.motivo || "")}">${app.hhmm(c.hora)} · ${c.lugar === "domicilio" ? "🏠" : "🏥"} ${esc((c.pacientes && c.pacientes.nombre) || "")}</div>`;
       }
-      if (!cellHtml && !diasAtencion.includes(DIAS[i].toLowerCase())) {
+      if (!cellHtml && !esLaboral) {
         html += `<div class="cal-cell" style="background:#f8fafc"></div>`;
+      } else if (!cellHtml && esLaboral && esFuturo && app.user && app.user.rol === "paciente") {
+        html += `<div class="cal-cell cal-slot" onclick="abrirAgendar('${fecha}','${hora}')" title="Agendar: ${hora}">${hora}</div>`;
       } else {
         html += `<div class="cal-cell">${cellHtml}</div>`;
       }
@@ -155,6 +160,57 @@ function cerrarDetalle() {
   document.getElementById("modal-detalle").classList.remove("open");
 }
 
+function abrirAgendar(fecha, hora) {
+  const sel = document.getElementById("sel-medico");
+  const medico = listaMedicos.find((m) => m.id === sel.value);
+  if (!medico) return;
+
+  slotSeleccionado = { medico_id: medico.id, fecha, hora, medico_nombre: medico.nombre, medico_esp: medico.especialidad };
+
+  document.getElementById("agendar-info").innerHTML = `
+    <div class="grid grid-2">
+      <div class="field"><label>Médico</label><div><strong>${esc(medico.nombre)}</strong> — ${esc(medico.especialidad)}</div></div>
+      <div class="field"><label>Fecha</label><div>${app.formatFechaLarga(fecha)}</div></div>
+      <div class="field"><label>Hora</label><div>${hora}</div></div>
+      <div class="field"><label>Lugar</label><div>🏥 Consultorio</div></div>
+    </div>
+  `;
+  document.getElementById("ag-motivo").value = "";
+  document.getElementById("modal-agendar").classList.add("open");
+}
+
+function cerrarAgendar() {
+  document.getElementById("modal-agendar").classList.remove("open");
+  slotSeleccionado = null;
+}
+
+async function confirmarAgendar() {
+  if (!slotSeleccionado) return;
+  const btn = document.getElementById("btn-agendar");
+  btn.disabled = true;
+  btn.textContent = "Agendando...";
+
+  try {
+    const { error } = await supabase.rpc("crear_cita", {
+      p_paciente: null,
+      p_medico: slotSeleccionado.medico_id,
+      p_fecha: slotSeleccionado.fecha,
+      p_hora: slotSeleccionado.hora + ":00",
+      p_motivo: document.getElementById("ag-motivo").value || null,
+      p_lugar: "consultorio",
+    });
+    if (error) throw new Error(error.message);
+    cerrarAgendar();
+    toast("Cita solicitada correctamente. Pendiente de aprobación.", "success");
+    cargarSemana();
+  } catch (err) {
+    toast(err.message, "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Confirmar cita";
+  }
+}
+
 function esc(str) {
   const div = document.createElement("div");
   div.textContent = str == null ? "" : str;
@@ -167,5 +223,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   initCalendario().catch((e) => toast(e.message, "error"));
   document.getElementById("modal-detalle").addEventListener("click", (e) => {
     if (e.target === document.getElementById("modal-detalle")) cerrarDetalle();
+  });
+  document.getElementById("modal-agendar").addEventListener("click", (e) => {
+    if (e.target === document.getElementById("modal-agendar")) cerrarAgendar();
   });
 });

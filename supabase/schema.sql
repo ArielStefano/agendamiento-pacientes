@@ -55,8 +55,8 @@ create table if not exists public.citas (
   motivo text,
   lugar text not null default 'consultorio'
     check (lugar in ('consultorio', 'domicilio')),
-  estado text not null default 'programada'
-    check (estado in ('programada', 'confirmada', 'completada', 'cancelada')),
+  estado      text not null default 'programada'
+                check (estado in ('solicitada', 'programada', 'confirmada', 'completada', 'cancelada')),
   creada_por uuid references auth.users (id),
   created_at timestamptz not null default now(),
   updated_at timestamptz
@@ -198,12 +198,25 @@ declare
   v_dur int;
   v_conflicto int;
   v_cita public.citas;
+  v_rol text;
+  v_estado text;
 begin
-  if public.rol_usuario() is null then
+  v_rol := public.rol_usuario();
+  if v_rol is null then
     raise exception 'Debe iniciar sesión';
   end if;
-  if public.rol_usuario() not in ('admin', 'recepcion', 'medico') then
+  if v_rol not in ('admin', 'recepcion', 'medico', 'paciente') then
     raise exception 'Sin permisos para crear citas';
+  end if;
+
+  if v_rol = 'paciente' then
+    p_paciente := public.paciente_id_usuario();
+    if p_paciente is null then
+      raise exception 'Su perfil de paciente no está completo';
+    end if;
+    v_estado := 'solicitada';
+  else
+    v_estado := 'programada';
   end if;
 
   if p_lugar is null then p_lugar := 'consultorio'; end if;
@@ -247,8 +260,8 @@ begin
     raise exception 'Horario no disponible: el médico ya tiene una cita en ese rango';
   end if;
 
-  insert into public.citas (paciente_id, medico_id, fecha, hora, duracion_min, motivo, lugar, creada_por)
-  values (p_paciente, p_medico, p_fecha, p_hora, v_dur, p_motivo, p_lugar, auth.uid())
+  insert into public.citas (paciente_id, medico_id, fecha, hora, duracion_min, motivo, lugar, estado, creada_por)
+  values (p_paciente, p_medico, p_fecha, p_hora, v_dur, p_motivo, p_lugar, v_estado, auth.uid())
   returning * into v_cita;
 
   return v_cita;
@@ -354,7 +367,7 @@ declare
   v_cita public.citas;
   v_rol text;
 begin
-  if p_estado not in ('programada', 'confirmada', 'completada', 'cancelada') then
+  if p_estado not in ('solicitada', 'programada', 'confirmada', 'completada', 'cancelada') then
     raise exception 'Estado inválido';
   end if;
 
@@ -415,6 +428,9 @@ create policy "citas_sel" on public.citas for select to authenticated
   );
 create policy "citas_del" on public.citas for delete to authenticated
   using (public.rol_usuario() in ('admin', 'recepcion'));
+
+create policy "citas_sel_paciente" on public.citas for select to authenticated
+  using (public.rol_usuario() = 'paciente' and public.paciente_id_usuario() = paciente_id);
 
 -- recordatorios: lectura y marcado como leído según destinatario
 -- (dirigido_a NULL = visible para todos; no NULL = solo ese usuario; admin ve todo)

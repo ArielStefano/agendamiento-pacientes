@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Citas | Agendamiento de Pacientes</title>
   <link rel="stylesheet" href="css/style.css" />
   <link rel="manifest" href="manifest.webmanifest" />
@@ -24,6 +24,7 @@
             <select id="f-medico" onchange="aplicarFiltros()"><option value="">Todos los médicos</option></select>
             <select id="f-estado" onchange="aplicarFiltros()">
               <option value="">Todos los estados</option>
+              <option value="solicitada">Solicitada</option>
               <option value="programada">Programada</option>
               <option value="confirmada">Confirmada</option>
               <option value="completada">Completada</option>

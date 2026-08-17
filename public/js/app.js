@@ -37,10 +37,17 @@ const app = {
     this.isMedico = perfil.rol === "medico";
     this.isAdminOrRecepcion = ["admin", "recepcion"].includes(perfil.rol);
 
+    // Pacientes van directo al calendario para agendar
+    if (perfil.rol === "paciente" && window.location.pathname.endsWith("dashboard.html")) {
+      window.location.href = "calendario.html";
+      return;
+    }
+
     this.renderSidebar();
     this.renderUser();
     this.setupBell();
     this.loadNotifications();
+    this.setupMobileMenu();
   },
 
   async logout() {
@@ -53,7 +60,7 @@ const app = {
     if (!nav) return;
 
     const links = [
-      { href: "dashboard.html", icon: "📊", label: "Inicio", show: true },
+      { href: this.user.rol === "paciente" ? "calendario.html" : "dashboard.html", icon: "📊", label: "Inicio", show: true },
       { href: "citas.html", icon: "🗓️", label: "Citas", show: true },
       { href: "calendario.html", icon: "📅", label: "Calendario", show: true },
       { href: "pacientes.html", icon: "🧑‍🤝‍🧑", label: "Pacientes", show: this.isAdminOrRecepcion },
@@ -147,6 +154,31 @@ const app = {
       .or(`dirigido_a.is.null,dirigido_a.eq.${this.user.id}`);
     this.loadNotifications();
     toast("Notificaciones marcadas como leídas", "success");
+  },
+
+  setupMobileMenu() {
+    const toggle = document.getElementById("menu-toggle");
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("sidebar-overlay");
+    if (!toggle || !sidebar) return;
+
+    const close = () => {
+      sidebar.classList.remove("open");
+      if (overlay) overlay.classList.remove("show");
+    };
+
+    toggle.addEventListener("click", () => {
+      sidebar.classList.toggle("open");
+      if (overlay) overlay.classList.toggle("show");
+    });
+
+    if (overlay) {
+      overlay.addEventListener("click", close);
+    }
+
+    sidebar.querySelectorAll("nav a").forEach((a) => {
+      a.addEventListener("click", close);
+    });
   },
 
   formatDate(value) {

@@ -10,10 +10,21 @@ function setupLayout(title) {
     `;
   }
 
+  // Overlay for mobile sidebar
+  if (!document.getElementById("sidebar-overlay")) {
+    const overlay = document.createElement("div");
+    overlay.id = "sidebar-overlay";
+    overlay.className = "sidebar-overlay";
+    document.body.appendChild(overlay);
+  }
+
   const topbar = document.getElementById("topbar");
   if (topbar) {
     topbar.innerHTML = `
-      <h1>${title}</h1>
+      <div class="topbar-left">
+        <button class="menu-toggle" id="menu-toggle" aria-label="Menú">☰</button>
+        <h1>${title}</h1>
+      </div>
       <div class="actions">
         <div class="bell-wrap" style="position:relative">
           <button class="bell" id="bell" title="Notificaciones">🔔<span class="badge" id="bell-badge">0</span></button>

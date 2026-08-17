@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Calendario | Agendamiento de Pacientes</title>
   <link rel="stylesheet" href="css/style.css" />
   <link rel="manifest" href="manifest.webmanifest" />
@@ -39,6 +39,21 @@
     <div class="modal">
       <h3>Detalle de la cita</h3>
       <div id="detalle-body"></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modal-agendar">
+    <div class="modal">
+      <h3>Agendar cita</h3>
+      <div id="agendar-info" class="mb-8"></div>
+      <div class="field">
+        <label for="ag-motivo">Motivo (opcional)</label>
+        <input type="text" id="ag-motivo" placeholder="Ej. Consulta general" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="cerrarAgendar()">Cancelar</button>
+        <button class="btn" id="btn-agendar" onclick="confirmarAgendar()">Confirmar cita</button>
+      </div>
     </div>
   </div>
 

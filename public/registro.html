@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Registro de pacientes | Agendamiento de Pacientes</title>
   <link rel="stylesheet" href="css/style.css" />
   <link rel="manifest" href="manifest.webmanifest" />
@@ -37,41 +37,21 @@
         <label for="nombre_cuenta">Nombre del representante *</label>
         <input type="text" id="nombre_cuenta" name="nombre_cuenta" autocomplete="off" placeholder="Nombre de quien usa esta cuenta" />
       </div>
-      <div class="grid grid-2">
-        <div class="field">
-          <label for="nombre">Nombre del paciente *</label>
-          <input type="text" id="nombre" name="nombre" required autocomplete="off" placeholder="Nombre completo" />
-        </div>
-        <div class="field">
-          <label for="documento">Documento</label>
-          <input type="text" id="documento" name="documento" autocomplete="off" placeholder="Cédula / pasaporte" />
-        </div>
-        <div class="field">
-          <label for="fecha_nacimiento">Fecha de nacimiento</label>
-          <input type="date" id="fecha_nacimiento" name="fecha_nacimiento" />
-        </div>
-        <div class="field">
-          <label for="telefono">Teléfono</label>
-          <input type="tel" id="telefono" name="telefono" autocomplete="off" placeholder="Ej. 099 123 4567" />
-        </div>
-        <div class="field">
-          <label for="direccion">Dirección</label>
-          <input type="text" id="direccion" name="direccion" autocomplete="off" placeholder="Calle y número" />
-        </div>
-        <div class="field">
-          <label for="alergias">Alergias</label>
-          <input type="text" id="alergias" name="alergias" autocomplete="off" placeholder="Ej. penicilina, ninguna" />
-        </div>
+      <div class="field">
+        <label for="nombre">Nombre del paciente *</label>
+        <input type="text" id="nombre" name="nombre" required autocomplete="off" placeholder="Nombre completo" />
       </div>
-      <div class="grid grid-2">
-        <div class="field">
-          <label for="email">Correo electrónico *</label>
-          <input type="email" id="email" name="email" required autocomplete="username" placeholder="usuario@ejemplo.com" />
-        </div>
-        <div class="field">
-          <label for="contrasena">Contraseña *</label>
-          <input type="password" id="contrasena" name="contrasena" required minlength="6" autocomplete="new-password" placeholder="Mínimo 6 caracteres" />
-        </div>
+      <div class="field">
+        <label for="telefono">Teléfono (opcional)</label>
+        <input type="tel" id="telefono" name="telefono" autocomplete="off" placeholder="Ej. 099 123 4567" />
+      </div>
+      <div class="field">
+        <label for="email">Correo electrónico *</label>
+        <input type="email" id="email" name="email" required autocomplete="username" placeholder="usuario@ejemplo.com" />
+      </div>
+      <div class="field">
+        <label for="contrasena">Contraseña *</label>
+        <input type="password" id="contrasena" name="contrasena" required minlength="6" autocomplete="new-password" placeholder="Mínimo 6 caracteres" />
       </div>
       <button type="submit" id="btn-registro" class="btn btn-block">Crear cuenta</button>
     </form>

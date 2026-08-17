@@ -6,6 +6,7 @@ let listaMedicos = [];
 let slotSeleccionado = null;
 
 const ESTADO_NEXT = {
+  solicitada: "confirmada",
   programada: "confirmada",
   confirmada: "completada",
 };
@@ -39,6 +40,12 @@ async function initCitas() {
   document.getElementById("f-desde").value = hoy;
   document.getElementById("f-hasta").value = app.addDaysISO(7);
   document.getElementById("c-fecha").min = hoy;
+
+  // Pacientes agendan desde el calendario, no desde aquí
+  if (app.user && app.user.rol === "paciente") {
+    const btnNueva = document.querySelector(".right .btn");
+    if (btnNueva) btnNueva.style.display = "none";
+  }
 
   aplicarFiltros();
 }
@@ -82,7 +89,9 @@ function renderTabla() {
     .map((c) => {
       const botones = [];
       if (ESTADO_NEXT[c.estado]) {
-        botones.push(`<button class="btn btn-sm btn-success" onclick="cambiarEstado('${c.id}', '${ESTADO_NEXT[c.estado]}')">${ESTADO_NEXT[c.estado] === "confirmada" ? "✓ Confirmar" : "✓ Completar"}</button>`);
+        const next = ESTADO_NEXT[c.estado];
+        const label = c.estado === "solicitada" ? "✓ Aprobar" : next === "confirmada" ? "✓ Confirmar" : "✓ Completar";
+        botones.push(`<button class="btn btn-sm btn-success" onclick="cambiarEstado('${c.id}', '${next}')">${label}</button>`);
       }
       if (c.estado !== "cancelada") {
         botones.push(`<button class="btn btn-sm btn-secondary" onclick="cambiarEstado('${c.id}', 'cancelada')">✕ Cancelar</button>`);

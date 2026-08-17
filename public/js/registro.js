@@ -46,12 +46,12 @@ document.addEventListener("DOMContentLoaded", () => {
         p_nombre_paciente: document.getElementById("nombre").value,
         p_es_representante: esRepresentante,
         p_nombre_cuenta: esRepresentante ? repNombre.value : null,
-        p_documento: document.getElementById("documento").value || null,
+        p_documento: null,
         p_email: document.getElementById("email").value,
         p_telefono: document.getElementById("telefono").value || null,
-        p_fecha_nacimiento: document.getElementById("fecha_nacimiento").value || null,
-        p_direccion: document.getElementById("direccion").value || null,
-        p_alergias: document.getElementById("alergias").value || null,
+        p_fecha_nacimiento: null,
+        p_direccion: null,
+        p_alergias: null,
         p_contrasena: document.getElementById("contrasena").value,
       });
       if (error) throw new Error(error.message);
