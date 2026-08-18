@@ -12,6 +12,18 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="CliniAgenda" />
+  <meta name="description" content="Calendario de citas médicas de CliniAgenda. Visualiza la agenda semanal y agenda nuevas consultas disponibles." />
+  <link rel="canonical" href="https://arielstefano.github.io/agendamiento-pacientes/calendario.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="es_ES" />
+  <meta property="og:site_name" content="CliniAgenda" />
+  <meta property="og:title" content="Calendario | CliniAgenda" />
+  <meta property="og:description" content="Calendario de citas médicas de CliniAgenda. Visualiza la agenda semanal y agenda nuevas consultas disponibles." />
+  <meta property="og:url" content="https://arielstefano.github.io/agendamiento-pacientes/calendario.html" />
+  <meta property="og:image" content="https://arielstefano.github.io/agendamiento-pacientes/icons/icon-512.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Calendario | CliniAgenda" />
+  <meta name="twitter:description" content="Calendario de citas médicas de CliniAgenda. Visualiza la agenda semanal y agenda nuevas consultas disponibles." />
 </head>
 <body data-title="Calendario de médicos">
   <div class="layout">
@@ -19,6 +31,7 @@
     <div class="main">
       <header class="topbar" id="topbar"></header>
       <main class="content">
+        <h2 style="margin-bottom:12px">Calendario semanal</h2>
         <div class="calendar-toolbar">
           <select id="sel-medico" onchange="cargarSemana()"></select>
           <button class="btn btn-secondary btn-sm" onclick="cambiarSemana(-1)">← Semana</button>
@@ -31,6 +44,13 @@
             <div id="calendario" class="calendar-grid"></div>
           </div>
         </div>
+        <nav class="seo-links" style="margin-top:24px; padding:12px; border-top:1px solid var(--border); font-size:13px; color:var(--text-muted);">
+          <a href="dashboard.html" style="margin-right:12px;">Inicio</a>
+          <a href="citas.html" style="margin-right:12px;">Citas</a>
+          <a href="calendario.html" style="margin-right:12px;">Calendario</a>
+          <a href="pacientes.html" style="margin-right:12px;">Pacientes</a>
+          <a href="medicos.html">Médicos</a>
+        </nav>
       </main>
     </div>
   </div>

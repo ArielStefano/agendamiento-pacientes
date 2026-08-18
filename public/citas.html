@@ -12,6 +12,18 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="CliniAgenda" />
+  <meta name="description" content="Gestiona las citas médicas en CliniAgenda. Crea, edita, confirma y administra consultas con médicos especialistas." />
+  <link rel="canonical" href="https://arielstefano.github.io/agendamiento-pacientes/citas.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="es_ES" />
+  <meta property="og:site_name" content="CliniAgenda" />
+  <meta property="og:title" content="Citas | CliniAgenda" />
+  <meta property="og:description" content="Gestiona las citas médicas en CliniAgenda. Crea, edita, confirma y administra consultas con médicos especialistas." />
+  <meta property="og:url" content="https://arielstefano.github.io/agendamiento-pacientes/citas.html" />
+  <meta property="og:image" content="https://arielstefano.github.io/agendamiento-pacientes/icons/icon-512.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Citas | CliniAgenda" />
+  <meta name="twitter:description" content="Gestiona las citas médicas en CliniAgenda. Crea, edita, confirma y administra consultas con médicos especialistas." />
 </head>
 <body data-title="Gestión de citas">
   <div class="layout">
@@ -19,6 +31,7 @@
     <div class="main">
       <header class="topbar" id="topbar"></header>
       <main class="content">
+        <h2 style="margin-bottom:12px">Gestión de citas</h2>
         <div class="toolbar">
           <div class="left">
             <select id="f-medico" onchange="aplicarFiltros()"><option value="">Todos los médicos</option></select>
@@ -38,6 +51,13 @@
           </div>
         </div>
         <div id="tabla-citas"></div>
+        <nav class="seo-links" style="margin-top:24px; padding:12px; border-top:1px solid var(--border); font-size:13px; color:var(--text-muted);">
+          <a href="dashboard.html" style="margin-right:12px;">Inicio</a>
+          <a href="citas.html" style="margin-right:12px;">Citas</a>
+          <a href="calendario.html" style="margin-right:12px;">Calendario</a>
+          <a href="pacientes.html" style="margin-right:12px;">Pacientes</a>
+          <a href="medicos.html">Médicos</a>
+        </nav>
       </main>
     </div>
   </div>
