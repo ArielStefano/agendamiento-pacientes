@@ -102,11 +102,11 @@ function tablaCitas(citas, mostrarFecha) {
       <table>
         <thead>
           <tr>
-            ${mostrarFecha ? "<th>Fecha</th>" : ""}
-            <th>Hora</th>
-            <th>Paciente</th>
-            <th>Médico</th>
-            <th>Estado</th>
+            ${mostrarFecha ? '<th scope="col">Fecha</th>' : ""}
+            <th scope="col">Hora</th>
+            <th scope="col">Paciente</th>
+            <th scope="col">Médico</th>
+            <th scope="col">Estado</th>
           </tr>
         </thead>
         <tbody>${filas}</tbody>

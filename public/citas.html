@@ -34,8 +34,8 @@
         <h2 style="margin-bottom:12px">Gestión de citas</h2>
         <div class="toolbar">
           <div class="left">
-            <select id="f-medico" onchange="aplicarFiltros()"><option value="">Todos los médicos</option></select>
-            <select id="f-estado" onchange="aplicarFiltros()">
+            <select id="f-medico" onchange="aplicarFiltros()" aria-label="Filtrar por médico"><option value="">Todos los médicos</option></select>
+            <select id="f-estado" onchange="aplicarFiltros()" aria-label="Filtrar por estado">
               <option value="">Todos los estados</option>
               <option value="solicitada">Solicitada</option>
               <option value="programada">Programada</option>
@@ -43,15 +43,15 @@
               <option value="completada">Completada</option>
               <option value="cancelada">Cancelada</option>
             </select>
-            <input type="date" id="f-desde" onchange="aplicarFiltros()" />
-            <input type="date" id="f-hasta" onchange="aplicarFiltros()" />
+            <input type="date" id="f-desde" onchange="aplicarFiltros()" aria-label="Fecha desde" />
+            <input type="date" id="f-hasta" onchange="aplicarFiltros()" aria-label="Fecha hasta" />
           </div>
           <div class="right">
             <button class="btn" onclick="abrirModalCita()">➕ Nueva cita</button>
           </div>
         </div>
         <div id="tabla-citas"></div>
-        <nav class="seo-links" style="margin-top:24px; padding:12px; border-top:1px solid var(--border); font-size:13px; color:var(--text-muted);">
+        <nav class="seo-links" style="margin-top:24px; padding:12px; border-top:1px solid var(--border); font-size:13px; color:var(--text-muted);" aria-label="Enlaces internos">
           <a href="dashboard.html" style="margin-right:12px;">Inicio</a>
           <a href="citas.html" style="margin-right:12px;">Citas</a>
           <a href="calendario.html" style="margin-right:12px;">Calendario</a>
@@ -62,29 +62,29 @@
     </div>
   </div>
 
-  <div class="modal-backdrop" id="modal-cita">
+  <div class="modal-backdrop" id="modal-cita" role="dialog" aria-modal="true" aria-labelledby="cita-titulo">
     <div class="modal large">
       <h3 id="cita-titulo">Nueva cita</h3>
       <input type="hidden" id="c-id" />
       <div class="form-row">
         <div class="field">
-          <label>Paciente *</label>
+          <label for="c-paciente">Paciente *</label>
           <select id="c-paciente"></select>
         </div>
         <div class="field">
-          <label>Médico *</label>
+          <label for="c-medico">Médico *</label>
           <select id="c-medico" onchange="cargarDisponibilidad()"></select>
         </div>
         <div class="field">
-          <label>Fecha *</label>
+          <label for="c-fecha">Fecha *</label>
           <input type="date" id="c-fecha" min="" onchange="cargarDisponibilidad()" />
         </div>
         <div class="field">
-          <label>Motivo</label>
+          <label for="c-motivo">Motivo</label>
           <input id="c-motivo" placeholder="Ej. Consulta de control" />
         </div>
         <div class="field">
-          <label>Lugar *</label>
+          <label for="c-lugar">Lugar *</label>
           <select id="c-lugar">
             <option value="consultorio">En consultorio</option>
             <option value="domicilio">A domicilio</option>

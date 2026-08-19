@@ -22,13 +22,13 @@ function setupLayout(title) {
   if (topbar) {
     topbar.innerHTML = `
       <div class="topbar-left">
-        <button class="menu-toggle" id="menu-toggle" aria-label="Menú">☰</button>
+        <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menú de navegación" aria-expanded="false">☰</button>
         <h1>${title}</h1>
       </div>
       <div class="actions">
         <div class="bell-wrap" style="position:relative">
-          <button class="bell" id="bell" title="Notificaciones">🔔<span class="badge" id="bell-badge">0</span></button>
-          <div class="bell-dropdown" id="bell-dropdown">
+          <button class="bell" id="bell" title="Notificaciones" aria-label="Notificaciones" aria-expanded="false" aria-haspopup="true">🔔<span class="badge" id="bell-badge" aria-hidden="true">0</span></button>
+          <div class="bell-dropdown" id="bell-dropdown" role="menu" aria-label="Lista de notificaciones">
             <div class="header">
               <span>Notificaciones</span>
               <button onclick="app.markAllRead()">Marcar leídas</button>

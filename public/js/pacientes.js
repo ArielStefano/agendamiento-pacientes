@@ -54,13 +54,13 @@ function renderTabla() {
       <table>
         <thead>
           <tr>
-            <th>Nombre</th>
-            <th>Documento</th>
-            <th>Teléfono</th>
-            <th>Email</th>
-            <th>Citas</th>
-            <th>Alergias</th>
-            <th>Acciones</th>
+            <th scope="col">Nombre</th>
+            <th scope="col">Documento</th>
+            <th scope="col">Teléfono</th>
+            <th scope="col">Email</th>
+            <th scope="col">Citas</th>
+            <th scope="col">Alergias</th>
+            <th scope="col">Acciones</th>
           </tr>
         </thead>
         <tbody>${filas}</tbody>
@@ -178,7 +178,7 @@ async function verDetalle(id) {
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>Fecha</th><th>Hora</th><th>Médico</th><th>Motivo</th><th>Estado</th></tr>
+          <tr><th scope="col">Fecha</th><th scope="col">Hora</th><th scope="col">Médico</th><th scope="col">Motivo</th><th scope="col">Estado</th></tr>
         </thead>
         <tbody>${citas || `<tr><td colspan="5" class="muted">Sin citas registradas</td></tr>`}</tbody>
       </table>

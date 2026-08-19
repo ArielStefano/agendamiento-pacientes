@@ -33,7 +33,7 @@
       <main class="content">
         <h2 style="margin-bottom:12px">Calendario semanal</h2>
         <div class="calendar-toolbar">
-          <select id="sel-medico" onchange="cargarSemana()"></select>
+          <select id="sel-medico" onchange="cargarSemana()" aria-label="Seleccionar médico"></select>
           <button class="btn btn-secondary btn-sm" onclick="cambiarSemana(-1)">← Semana</button>
           <button class="btn btn-secondary btn-sm" onclick="irHoy()">Hoy</button>
           <button class="btn btn-secondary btn-sm" onclick="cambiarSemana(1)">Semana →</button>
@@ -44,7 +44,7 @@
             <div id="calendario" class="calendar-grid"></div>
           </div>
         </div>
-        <nav class="seo-links" style="margin-top:24px; padding:12px; border-top:1px solid var(--border); font-size:13px; color:var(--text-muted);">
+        <nav class="seo-links" style="margin-top:24px; padding:12px; border-top:1px solid var(--border); font-size:13px; color:var(--text-muted);" aria-label="Enlaces internos">
           <a href="dashboard.html" style="margin-right:12px;">Inicio</a>
           <a href="citas.html" style="margin-right:12px;">Citas</a>
           <a href="calendario.html" style="margin-right:12px;">Calendario</a>
@@ -55,14 +55,14 @@
     </div>
   </div>
 
-  <div class="modal-backdrop" id="modal-detalle">
+  <div class="modal-backdrop" id="modal-detalle" role="dialog" aria-modal="true" aria-label="Detalle de la cita">
     <div class="modal">
       <h3>Detalle de la cita</h3>
       <div id="detalle-body"></div>
     </div>
   </div>
 
-  <div class="modal-backdrop" id="modal-agendar">
+  <div class="modal-backdrop" id="modal-agendar" role="dialog" aria-modal="true" aria-label="Agendar cita">
     <div class="modal">
       <h3>Agendar cita</h3>
       <div id="agendar-info" class="mb-8"></div>

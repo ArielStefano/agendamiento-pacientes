@@ -34,14 +34,14 @@
         <h2 style="margin-bottom:12px">Directorio de pacientes</h2>
         <div class="toolbar">
           <div class="left">
-            <input type="search" id="buscar" class="search-input" placeholder="Buscar por nombre, documento, email o teléfono..." />
+            <input type="search" id="buscar" class="search-input" placeholder="Buscar por nombre, documento, email o teléfono..." aria-label="Buscar pacientes" />
           </div>
           <div class="right">
             <button class="btn" onclick="abrirModalPaciente()">➕ Nuevo paciente</button>
           </div>
         </div>
         <div id="tabla-pacientes"></div>
-        <nav class="seo-links" style="margin-top:24px; padding:12px; border-top:1px solid var(--border); font-size:13px; color:var(--text-muted);">
+        <nav class="seo-links" style="margin-top:24px; padding:12px; border-top:1px solid var(--border); font-size:13px; color:var(--text-muted);" aria-label="Enlaces internos">
           <a href="dashboard.html" style="margin-right:12px;">Inicio</a>
           <a href="citas.html" style="margin-right:12px;">Citas</a>
           <a href="calendario.html" style="margin-right:12px;">Calendario</a>
@@ -52,42 +52,42 @@
     </div>
   </div>
 
-  <div class="modal-backdrop" id="modal">
+  <div class="modal-backdrop" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
     <div class="modal large">
       <h3 id="modal-titulo">Nuevo paciente</h3>
       <input type="hidden" id="p-id" />
       <div class="form-row">
         <div class="field">
-          <label>Nombre completo *</label>
+          <label for="p-nombre">Nombre completo *</label>
           <input id="p-nombre" required />
         </div>
         <div class="field">
-          <label>Documento</label>
+          <label for="p-documento">Documento</label>
           <input id="p-documento" />
         </div>
         <div class="field">
-          <label>Email</label>
+          <label for="p-email">Email</label>
           <input type="email" id="p-email" />
         </div>
         <div class="field">
-          <label>Teléfono</label>
+          <label for="p-telefono">Teléfono</label>
           <input id="p-telefono" />
         </div>
         <div class="field">
-          <label>Fecha de nacimiento</label>
+          <label for="p-nacimiento">Fecha de nacimiento</label>
           <input type="date" id="p-nacimiento" />
         </div>
         <div class="field">
-          <label>Dirección</label>
+          <label for="p-direccion">Dirección</label>
           <input id="p-direccion" />
         </div>
       </div>
       <div class="field">
-        <label>Alergias</label>
+        <label for="p-alergias">Alergias</label>
         <input id="p-alergias" />
       </div>
       <div class="field">
-        <label>Notas</label>
+        <label for="p-notas">Notas</label>
         <textarea id="p-notas" rows="2"></textarea>
       </div>
       <div class="modal-footer">
@@ -97,7 +97,7 @@
     </div>
   </div>
 
-  <div class="modal-backdrop" id="modal-detalle">
+  <div class="modal-backdrop" id="modal-detalle" role="dialog" aria-modal="true" aria-label="Detalle del paciente">
     <div class="modal large">
       <h3>Detalle del paciente</h3>
       <div id="detalle-body"></div>

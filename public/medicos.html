@@ -34,14 +34,14 @@
         <h2 style="margin-bottom:12px">Médicos y horarios</h2>
         <div class="toolbar">
           <div class="left">
-            <input type="search" id="buscar" class="search-input" placeholder="Buscar por nombre, especialidad o email..." />
+            <input type="search" id="buscar" class="search-input" placeholder="Buscar por nombre, especialidad o email..." aria-label="Buscar médicos" />
           </div>
           <div class="right">
             <button class="btn" onclick="abrirModalMedico()">➕ Nuevo médico</button>
           </div>
         </div>
         <div id="tabla-medicos"></div>
-        <nav class="seo-links" style="margin-top:24px; padding:12px; border-top:1px solid var(--border); font-size:13px; color:var(--text-muted);">
+        <nav class="seo-links" style="margin-top:24px; padding:12px; border-top:1px solid var(--border); font-size:13px; color:var(--text-muted);" aria-label="Enlaces internos">
           <a href="dashboard.html" style="margin-right:12px;">Inicio</a>
           <a href="citas.html" style="margin-right:12px;">Citas</a>
           <a href="calendario.html" style="margin-right:12px;">Calendario</a>
@@ -52,42 +52,42 @@
     </div>
   </div>
 
-  <div class="modal-backdrop" id="modal">
+  <div class="modal-backdrop" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
     <div class="modal large">
       <h3 id="modal-titulo">Nuevo médico</h3>
       <input type="hidden" id="m-id" />
       <div class="form-row">
         <div class="field">
-          <label>Nombre completo *</label>
+          <label for="m-nombre">Nombre completo *</label>
           <input id="m-nombre" required />
         </div>
         <div class="field">
-          <label>Especialidad *</label>
+          <label for="m-especialidad">Especialidad *</label>
           <input id="m-especialidad" placeholder="Ej. Psicología" required />
         </div>
         <div class="field">
-          <label>Teléfono</label>
+          <label for="m-telefono">Teléfono</label>
           <input id="m-telefono" />
         </div>
         <div class="field">
-          <label>Email de acceso *</label>
+          <label for="m-email">Email de acceso *</label>
           <input type="email" id="m-email" required />
         </div>
       </div>
       <div class="form-row">
         <div class="field">
-          <label id="m-pass-label">Contraseña de acceso *</label>
+          <label id="m-pass-label" for="m-pass">Contraseña de acceso *</label>
           <div class="inline">
             <input type="text" id="m-pass" autocomplete="new-password" />
             <button class="btn btn-sm btn-secondary" type="button" onclick="generarClave()">Generar</button>
           </div>
         </div>
         <div class="field">
-          <label>Duración de cita (min) *</label>
+          <label for="m-duracion">Duración de cita (min) *</label>
           <input type="number" id="m-duracion" min="10" step="5" value="30" required />
         </div>
         <div class="field">
-          <label>Traslado domicilio (min)</label>
+          <label for="m-buffer">Traslado domicilio (min)</label>
           <input type="number" id="m-buffer" min="0" step="5" value="30" title="Tiempo de buffer entre citas a domicilio" />
         </div>
       </div>
@@ -95,38 +95,38 @@
         <label>Horario principal (Lunes a Viernes) *</label>
         <div class="form-row">
           <div class="field">
-            <label class="small muted">Hora inicio</label>
+            <label for="m-inicio" class="small muted">Hora inicio</label>
             <input type="time" id="m-inicio" value="08:00" required />
           </div>
           <div class="field">
-            <label class="small muted">Hora fin</label>
+            <label for="m-fin" class="small muted">Hora fin</label>
             <input type="time" id="m-fin" value="17:00" required />
           </div>
         </div>
       </div>
       <div class="field">
-        <label class="small">
+        <label for="m-sabado-toggle" class="small">
           <input type="checkbox" id="m-sabado-toggle" onchange="toggleSabado()" />
           Sábado con horario diferente
         </label>
         <div id="m-sabado-fields" class="form-row" style="display:none; margin-top:8px;">
           <div class="field">
-            <label class="small muted">Inicio sábado</label>
+            <label for="m-inicio-sabado" class="small muted">Inicio sábado</label>
             <input type="time" id="m-inicio-sabado" value="08:00" />
           </div>
           <div class="field">
-            <label class="small muted">Fin sábado</label>
+            <label for="m-fin-sabado" class="small muted">Fin sábado</label>
             <input type="time" id="m-fin-sabado" value="12:00" />
           </div>
         </div>
       </div>
       <div class="form-row">
         <div class="field">
-          <label>Descanso — inicio</label>
+          <label for="m-descanso-inicio">Descanso — inicio</label>
           <input type="time" id="m-descanso-inicio" title="Hora de inicio del descanso (opcional)" />
         </div>
         <div class="field">
-          <label>Descanso — fin</label>
+          <label for="m-descanso-fin">Descanso — fin</label>
           <input type="time" id="m-descanso-fin" title="Hora de fin del descanso (opcional)" />
         </div>
       </div>
@@ -149,7 +149,7 @@
     </div>
   </div>
 
-  <div class="modal-backdrop" id="modal-cred">
+  <div class="modal-backdrop" id="modal-cred" role="dialog" aria-modal="true" aria-label="Credenciales del médico">
     <div class="modal">
       <h3>Médico creado</h3>
       <p class="muted small">Comunica estos datos de acceso al médico:</p>

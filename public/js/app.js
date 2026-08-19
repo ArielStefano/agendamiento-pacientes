@@ -97,12 +97,15 @@ const app = {
     if (!bell) return;
     bell.addEventListener("click", (e) => {
       e.stopPropagation();
-      document.getElementById("bell-dropdown").classList.toggle("open");
+      const dd = document.getElementById("bell-dropdown");
+      dd.classList.toggle("open");
+      bell.setAttribute("aria-expanded", dd.classList.contains("open"));
     });
     document.addEventListener("click", (e) => {
       const dd = document.getElementById("bell-dropdown");
       if (dd && !dd.contains(e.target) && !bell.contains(e.target)) {
         dd.classList.remove("open");
+        bell.setAttribute("aria-expanded", "false");
       }
     });
   },
@@ -165,11 +168,13 @@ const app = {
     const close = () => {
       sidebar.classList.remove("open");
       if (overlay) overlay.classList.remove("show");
+      toggle.setAttribute("aria-expanded", "false");
     };
 
     toggle.addEventListener("click", () => {
       sidebar.classList.toggle("open");
       if (overlay) overlay.classList.toggle("show");
+      toggle.setAttribute("aria-expanded", sidebar.classList.contains("open"));
     });
 
     if (overlay) {

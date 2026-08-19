@@ -35,19 +35,19 @@
         <div class="card mb-16">
           <h4 class="mb-8">Generar recordatorio de una cita</h4>
           <div class="flex-between" style="gap:12px">
-            <select id="sel-cita" style="flex:1"></select>
+            <select id="sel-cita" style="flex:1" aria-label="Seleccionar cita para generar recordatorio"></select>
             <button class="btn" onclick="generarRecordatorio()">🔔 Generar</button>
           </div>
         </div>
         <div class="toolbar">
           <div class="left">
-            <select id="f-estado" onchange="aplicarFiltros()">
+            <select id="f-estado" onchange="aplicarFiltros()" aria-label="Filtrar por estado">
               <option value="">Todos los estados</option>
               <option value="pendiente">Pendiente</option>
               <option value="enviado">Enviado</option>
               <option value="fallido">Fallido</option>
             </select>
-            <select id="f-canal" onchange="aplicarFiltros()">
+            <select id="f-canal" onchange="aplicarFiltros()" aria-label="Filtrar por canal">
               <option value="">Todos los canales</option>
               <option value="app">App</option>
               <option value="email">Email</option>

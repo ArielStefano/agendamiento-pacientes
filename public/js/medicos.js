@@ -71,8 +71,8 @@ function renderTabla() {
       <table>
         <thead>
           <tr>
-            <th>Nombre</th><th>Especialidad</th><th>Teléfono</th><th>Email</th>
-            <th>Agenda</th><th>Citas</th><th>Acciones</th>
+            <th scope="col">Nombre</th><th scope="col">Especialidad</th><th scope="col">Teléfono</th><th scope="col">Email</th>
+            <th scope="col">Agenda</th><th scope="col">Citas</th><th scope="col">Acciones</th>
           </tr>
         </thead>
         <tbody>${filas}</tbody>
