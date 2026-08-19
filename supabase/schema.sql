@@ -19,7 +19,10 @@ create table if not exists public.medicos (
   duracion_cita_min int not null default 30,
   hora_inicio_sabado time,
   hora_fin_sabado time,
-  created_at timestamptz not null default now()
+  created_at  timestamptz not null default now(),
+  buffer_domicilio_min int default 30,
+  hora_inicio_descanso time,
+  hora_fin_descanso time
 );
 
 create table if not exists public.perfiles (
@@ -578,7 +581,9 @@ create or replace function public.crear_medico_admin(
   p_contrasena text,
   p_hora_inicio_sabado time default null,
   p_hora_fin_sabado time default null,
-  p_buffer_domicilio_min int default 30
+  p_buffer_domicilio_min int default 30,
+  p_hora_inicio_descanso time default null,
+  p_hora_fin_descanso time default null
 )
 returns jsonb
 language plpgsql security definer set search_path = public
@@ -616,6 +621,15 @@ begin
     end if;
   end if;
 
+  if (p_hora_inicio_descanso is null) <> (p_hora_fin_descanso is null) then
+    raise exception 'Si configura descanso, debe indicar inicio y fin';
+  end if;
+  if p_hora_inicio_descanso is not null and p_hora_fin_descanso is not null then
+    if p_hora_inicio_descanso >= p_hora_fin_descanso then
+      raise exception 'El descanso: inicio debe ser anterior a fin';
+    end if;
+  end if;
+
   if exists (select 1 from auth.users u where lower(u.email) = v_email) then
     raise exception 'Ya existe un usuario con ese email';
   end if;
@@ -636,10 +650,11 @@ begin
           jsonb_build_object('sub', v_user_id, 'email', v_email), 'email', now(), now(), now());
 
   insert into public.medicos (nombre, especialidad, telefono, email, dias_atencion,
-    hora_inicio, hora_fin, duracion_cita_min, hora_inicio_sabado, hora_fin_sabado, buffer_domicilio_min)
+    hora_inicio, hora_fin, duracion_cita_min, hora_inicio_sabado, hora_fin_sabado,
+    buffer_domicilio_min, hora_inicio_descanso, hora_fin_descanso)
   values (trim(p_nombre), trim(p_especialidad), p_telefono, v_email, p_dias,
     p_hora_inicio, p_hora_fin, p_duracion, p_hora_inicio_sabado, p_hora_fin_sabado,
-    coalesce(p_buffer_domicilio_min, 30))
+    coalesce(p_buffer_domicilio_min, 30), p_hora_inicio_descanso, p_hora_fin_descanso)
   returning id into v_medico_id;
 
   insert into public.perfiles (user_id, nombre, rol, medico_id)
@@ -649,8 +664,8 @@ begin
 end;
 $$;
 
-grant execute on function public.crear_medico_admin(text, text, text, text, jsonb, time, time, int, text, time, time, int) to authenticated;
-revoke all on function public.crear_medico_admin(text, text, text, text, jsonb, time, time, int, text, time, time, int) from public;
+grant execute on function public.crear_medico_admin(text, text, text, text, jsonb, time, time, int, text, time, time, int, time, time) to authenticated;
+revoke all on function public.crear_medico_admin(text, text, text, text, jsonb, time, time, int, text, time, time, int, time, time) from public;
 
 -- Edita médico (puede cambiar email y contraseña de acceso)
 create or replace function public.actualizar_medico_admin(
@@ -666,7 +681,9 @@ create or replace function public.actualizar_medico_admin(
   p_contrasena text default null,
   p_hora_inicio_sabado time default null,
   p_hora_fin_sabado time default null,
-  p_buffer_domicilio_min int default 30
+  p_buffer_domicilio_min int default 30,
+  p_hora_inicio_descanso time default null,
+  p_hora_fin_descanso time default null
 )
 returns jsonb
 language plpgsql security definer set search_path = public
@@ -703,6 +720,15 @@ begin
     end if;
   end if;
 
+  if (p_hora_inicio_descanso is null) <> (p_hora_fin_descanso is null) then
+    raise exception 'Si configura descanso, debe indicar inicio y fin';
+  end if;
+  if p_hora_inicio_descanso is not null and p_hora_fin_descanso is not null then
+    if p_hora_inicio_descanso >= p_hora_fin_descanso then
+      raise exception 'El descanso: inicio debe ser anterior a fin';
+    end if;
+  end if;
+
   select m.email, p.user_id into v_antiguo, v_user_id
   from public.medicos m left join public.perfiles p on p.medico_id = m.id
   where m.id = p_id;
@@ -735,7 +761,8 @@ begin
       email = v_email, dias_atencion = p_dias, hora_inicio = p_hora_inicio, hora_fin = p_hora_fin,
       duracion_cita_min = p_duracion,
       hora_inicio_sabado = p_hora_inicio_sabado, hora_fin_sabado = p_hora_fin_sabado,
-      buffer_domicilio_min = coalesce(p_buffer_domicilio_min, 30)
+      buffer_domicilio_min = coalesce(p_buffer_domicilio_min, 30),
+      hora_inicio_descanso = p_hora_inicio_descanso, hora_fin_descanso = p_hora_fin_descanso
   where id = p_id;
 
   update public.perfiles set nombre = trim(p_nombre) where medico_id = p_id;
@@ -744,8 +771,8 @@ begin
 end;
 $$;
 
-grant execute on function public.actualizar_medico_admin(uuid, text, text, text, text, jsonb, time, time, int, text, time, time, int) to authenticated;
-revoke all on function public.actualizar_medico_admin(uuid, text, text, text, text, jsonb, time, time, int, text, time, time, int) from public;
+grant execute on function public.actualizar_medico_admin(uuid, text, text, text, text, jsonb, time, time, int, text, time, time, int, time, time) to authenticated;
+revoke all on function public.actualizar_medico_admin(uuid, text, text, text, text, jsonb, time, time, int, text, time, time, int, time, time) from public;
 
 -- Elimina médico (solo si no tiene citas) junto con su usuario de acceso
 create or replace function public.eliminar_medico_admin(p_id uuid)

@@ -32,7 +32,10 @@ function fmtAgenda(m) {
     ? ` | Sáb: ${fmtHorario(m.hora_inicio_sabado, m.hora_fin_sabado)}`
     : "";
   const buffer = m.buffer_domicilio_min ? ` · Traslado: ${m.buffer_domicilio_min} min` : "";
-  return `${esc(dias.join(", "))}<br>${principal}${sabado} · ${m.duracion_cita_min} min${buffer}`;
+  const descanso = m.hora_inicio_descanso && m.hora_fin_descanso
+    ? ` · Descanso: ${fmtHorario(m.hora_inicio_descanso, m.hora_fin_descanso)}`
+    : "";
+  return `${esc(dias.join(", "))}<br>${principal}${sabado} · ${m.duracion_cita_min} min${buffer}${descanso}`;
 }
 
 function renderTabla() {
@@ -124,6 +127,9 @@ function abrirModalMedico(medico = null) {
     document.getElementById("m-fin-sabado").value = "12:00";
   }
 
+  document.getElementById("m-descanso-inicio").value = medico && medico.hora_inicio_descanso ? app.hhmm(medico.hora_inicio_descanso) : "";
+  document.getElementById("m-descanso-fin").value = medico && medico.hora_fin_descanso ? app.hhmm(medico.hora_fin_descanso) : "";
+
   document.getElementById("modal").classList.add("open");
 }
 
@@ -174,6 +180,9 @@ async function guardarMedico() {
     hora_fin_sabado = document.getElementById("m-fin-sabado").value + ":00";
   }
 
+  const descansoInicio = document.getElementById("m-descanso-inicio").value || null;
+  const descansoFin = document.getElementById("m-descanso-fin").value || null;
+
   if (!nombre) return toast("El nombre es obligatorio", "error");
   if (!especialidad) return toast("La especialidad es obligatoria", "error");
   if (!email) return toast("El email es obligatorio", "error");
@@ -198,6 +207,8 @@ async function guardarMedico() {
       p_hora_inicio_sabado: hora_inicio_sabado,
       p_hora_fin_sabado: hora_fin_sabado,
       p_buffer_domicilio_min: buffer,
+      p_hora_inicio_descanso: descansoInicio ? descansoInicio + ":00" : null,
+      p_hora_fin_descanso: descansoFin ? descansoFin + ":00" : null,
     };
     if (pass) params.p_contrasena = pass;
     ({ data: datos, error } = await supabase.rpc("actualizar_medico_admin", params));
@@ -217,6 +228,8 @@ async function guardarMedico() {
       p_hora_inicio_sabado: hora_inicio_sabado,
       p_hora_fin_sabado: hora_fin_sabado,
       p_buffer_domicilio_min: buffer,
+      p_hora_inicio_descanso: descansoInicio ? descansoInicio + ":00" : null,
+      p_hora_fin_descanso: descansoFin ? descansoFin + ":00" : null,
     }));
     if (!error) {
       toast("Médico creado correctamente", "success");

@@ -101,6 +101,19 @@ function renderCalendario(medico, citas) {
   const dur = medico.duracion_cita_min || 30;
   const bufferDom = medico.buffer_domicilio_min || 0;
 
+  // Rango de descanso
+  let descansoIni = null, descansoFin = null;
+  if (medico.hora_inicio_descanso && medico.hora_fin_descanso) {
+    descansoIni = toMin(medico.hora_inicio_descanso);
+    descansoFin = toMin(medico.hora_fin_descanso);
+  }
+
+  function enDescanso(hora) {
+    if (descansoIni === null) return false;
+    const hm = toMin(hora);
+    return hm >= descansoIni && hm < descansoFin;
+  }
+
   // Pre-calcular slots bloqueados por buffer domicilio por fecha
   const bloqueadosPorBuffer = {};
   if (bufferDom > 0) {
@@ -170,7 +183,9 @@ function renderCalendario(medico, citas) {
       if (!cellHtml && !esLaboral) {
         html += `<div class="cal-cell" style="background:#f8fafc"></div>`;
       } else if (!cellHtml && esLaboral && esFuturo && app.user && app.user.rol === "paciente") {
-        if (esSlotBloqueado(fecha, hora)) {
+        if (enDescanso(hora)) {
+          html += `<div class="cal-cell" style="background:#e0e7ff" title="Horario de descanso"></div>`;
+        } else if (esSlotBloqueado(fecha, hora)) {
           html += `<div class="cal-cell" style="background:#fef3c7" title="En ruta (traslado)"></div>`;
         } else {
           html += `<div class="cal-cell cal-slot" onclick="abrirAgendar('${fecha}','${hora}')" title="Agendar: ${hora}">${hora}</div>`;

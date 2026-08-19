@@ -228,12 +228,24 @@ function calcularSlots(medico, fecha, citas) {
     fin = toMin(medico.hora_fin);
   }
 
+  // Rango de descanso
+  let descansoIni = null, descansoFin = null;
+  if (medico.hora_inicio_descanso && medico.hora_fin_descanso) {
+    descansoIni = toMin(medico.hora_inicio_descanso);
+    descansoFin = toMin(medico.hora_fin_descanso);
+  }
+
   const ocupados = citas.map((c) => ({ i: toMin(c.hora), f: toMin(c.hora) + c.duracion_min, l: c.lugar, e: c.estado }));
 
   const slots = [];
   for (let t = inicio; t + dur <= fin; t += dur) {
     const conflicto = ocupados.some((o) => t < o.f && o.i < t + dur);
     if (conflicto) continue;
+
+    // Descanso: bloquear slot si cae dentro del rango de descanso
+    if (descansoIni !== null && descansoFin !== null) {
+      if (t < descansoFin && t + dur > descansoIni) continue;
+    }
 
     // Buffer domicilio: bloquear slot si una cita domicilio termina dentro del buffer antes de este slot
     if (bufferDom > 0) {
