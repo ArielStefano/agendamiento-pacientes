@@ -122,20 +122,25 @@ language plpgsql security definer set search_path = public
 as $$
 declare
   v_paciente text;
-  v_email text;
+  v_email_paciente text;
   v_medico text;
   v_esp text;
   v_msj text;
   v_lugar text;
   v_creador text;
+  v_medico_email text;
+  v_medico_user_id uuid;
   v_admin record;
 begin
-  select p.nombre, p.email into v_paciente, v_email
+  select p.nombre, p.email into v_paciente, v_email_paciente
   from public.pacientes p where p.id = new.paciente_id;
 
-  select m.nombre, m.especialidad into v_medico, v_esp
+  select m.nombre, m.especialidad, m.email into v_medico, v_esp, v_medico_email
   from public.medicos m where m.id = new.medico_id;
 
+  v_lugar := case when new.lugar = 'domicilio' then 'a domicilio' else 'en consultorio' end;
+
+  -- Recordatorio paciente (app)
   v_msj := 'Recordatorio de cita: ' || v_paciente || ' con ' || v_medico ||
            ' (' || v_esp || ') el ' || to_char(new.fecha, 'DD/MM/YYYY') ||
            ' a las ' || to_char(new.hora, 'HH24:MI') || '.';
@@ -143,34 +148,48 @@ begin
   insert into public.recordatorios (cita_id, paciente_id, canal, mensaje, fecha_programada, estado)
   values (new.id, new.paciente_id, 'app', v_msj, new.fecha + new.hora, 'pendiente');
 
-  if v_email is not null and v_email <> '' then
+  -- Recordatorio paciente (email)
+  if v_email_paciente is not null and v_email_paciente <> '' then
     insert into public.recordatorios (cita_id, paciente_id, canal, mensaje, fecha_programada, estado)
     values (new.id, new.paciente_id, 'email', v_msj, new.fecha + new.hora, 'pendiente');
   end if;
 
-  -- Alerta inmediata para los admins cuando la cita es de la psicóloga
-  if exists (select 1 from public.medicos m where m.id = new.medico_id and m.email = 'jtoaquiza@clinica.com') then
-    v_lugar := case when new.lugar = 'domicilio' then 'a domicilio' else 'en consultorio' end;
+  -- Alerta al médico asignado: nueva cita solicitada
+  if v_medico_email is not null and v_medico_email <> '' then
+    select user_id into v_medico_user_id
+    from public.perfiles p
+    join auth.users u on u.id = p.user_id
+    where lower(u.email) = lower(v_medico_email)
+    limit 1;
 
-    select p.nombre into v_creador from public.perfiles p where p.user_id = new.creada_por;
+    if v_medico_user_id is not null then
+      select p.nombre into v_creador from public.perfiles p where p.user_id = new.creada_por;
 
-    for v_admin in select user_id from public.perfiles where rol = 'admin' loop
       insert into public.recordatorios (cita_id, paciente_id, canal, mensaje, fecha_programada, estado, dirigido_a)
       values (
-        new.id,
-        new.paciente_id,
-        'app',
-        'Nueva cita para ' || v_medico || ' (' || v_esp || '): ' || v_paciente ||
-          ' el ' || to_char(new.fecha, 'DD/MM/YYYY') ||
-          ' a las ' || to_char(new.hora, 'HH24:MI') ||
-          ' ' || v_lugar ||
+        new.id, new.paciente_id, 'app',
+        'Nueva cita solicitada: ' || v_paciente || ' el ' || to_char(new.fecha, 'DD/MM/YYYY') ||
+          ' a las ' || to_char(new.hora, 'HH24:MI') || ' ' || v_lugar ||
+          '. Motivo: ' || coalesce(new.motivo, 'No especificado') ||
           '. Agendada por ' || coalesce(v_creador, 'el sistema') || '.',
-        now(),
-        'pendiente',
-        v_admin.user_id
+        now(), 'pendiente', v_medico_user_id
       );
-    end loop;
+    end if;
   end if;
+
+  -- Alerta a todos los admins
+  for v_admin in select user_id from public.perfiles where rol = 'admin' loop
+    insert into public.recordatorios (cita_id, paciente_id, canal, mensaje, fecha_programada, estado, dirigido_a)
+    values (
+      new.id, new.paciente_id, 'app',
+      'Nueva cita para ' || v_medico || ' (' || v_esp || '): ' || v_paciente ||
+        ' el ' || to_char(new.fecha, 'DD/MM/YYYY') ||
+        ' a las ' || to_char(new.hora, 'HH24:MI') ||
+        ' ' || v_lugar ||
+        '. Agendada por ' || coalesce(v_creador, 'el sistema') || '.',
+      now(), 'pendiente', v_admin.user_id
+    );
+  end loop;
 
   return new;
 end;
@@ -180,6 +199,76 @@ drop trigger if exists trg_generar_recordatorios on public.citas;
 create trigger trg_generar_recordatorios
 after insert on public.citas
 for each row execute function public.generar_recordatorios();
+
+-- Trigger AFTER UPDATE: notificar cambios de estado al médico
+create or replace function public.notificar_cambio_estado()
+returns trigger
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_paciente text;
+  v_medico text;
+  v_esp text;
+  v_lugar text;
+  v_medico_email text;
+  v_medico_user_id uuid;
+begin
+  if old.estado = new.estado then return new; end if;
+
+  select p.nombre into v_paciente from public.pacientes p where p.id = new.paciente_id;
+  select m.nombre, m.especialidad, m.email into v_medico, v_esp, v_medico_email
+  from public.medicos m where m.id = new.medico_id;
+
+  v_lugar := case when new.lugar = 'domicilio' then 'a domicilio' else 'en consultorio' end;
+
+  if v_medico_email is not null and v_medico_email <> '' then
+    select user_id into v_medico_user_id
+    from public.perfiles p
+    join auth.users u on u.id = p.user_id
+    where lower(u.email) = lower(v_medico_email)
+    limit 1;
+  end if;
+
+  if v_medico_user_id is null then return new; end if;
+
+  if new.estado = 'confirmada' and old.estado in ('solicitada', 'programada') then
+    insert into public.recordatorios (cita_id, paciente_id, canal, mensaje, fecha_programada, estado, dirigido_a)
+    values (
+      new.id, new.paciente_id, 'app',
+      'Cita confirmada: ' || v_paciente || ' el ' || to_char(new.fecha, 'DD/MM/YYYY') ||
+        ' a las ' || to_char(new.hora, 'HH24:MI') || ' ' || v_lugar || '.',
+      now(), 'pendiente', v_medico_user_id
+    );
+  end if;
+
+  if new.estado = 'completada' and old.estado = 'confirmada' then
+    insert into public.recordatorios (cita_id, paciente_id, canal, mensaje, fecha_programada, estado, dirigido_a)
+    values (
+      new.id, new.paciente_id, 'app',
+      'Cita completada: ' || v_paciente || ' el ' || to_char(new.fecha, 'DD/MM/YYYY') ||
+        ' a las ' || to_char(new.hora, 'HH24:MI') || '.',
+      now(), 'pendiente', v_medico_user_id
+    );
+  end if;
+
+  if new.estado = 'cancelada' and old.estado != 'cancelada' then
+    insert into public.recordatorios (cita_id, paciente_id, canal, mensaje, fecha_programada, estado, dirigido_a)
+    values (
+      new.id, new.paciente_id, 'app',
+      'Cita cancelada: ' || v_paciente || ' el ' || to_char(new.fecha, 'DD/MM/YYYY') ||
+        ' a las ' || to_char(new.hora, 'HH24:MI') || '.',
+      now(), 'pendiente', v_medico_user_id
+    );
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_notificar_estado on public.citas;
+create trigger trg_notificar_estado
+after update on public.citas
+for each row execute function public.notificar_cambio_estado();
 
 -- ---------- RPC: crear cita (valida disponibilidad) ----------
 
@@ -488,7 +577,8 @@ create or replace function public.crear_medico_admin(
   p_duracion int,
   p_contrasena text,
   p_hora_inicio_sabado time default null,
-  p_hora_fin_sabado time default null
+  p_hora_fin_sabado time default null,
+  p_buffer_domicilio_min int default 30
 )
 returns jsonb
 language plpgsql security definer set search_path = public
@@ -546,9 +636,10 @@ begin
           jsonb_build_object('sub', v_user_id, 'email', v_email), 'email', now(), now(), now());
 
   insert into public.medicos (nombre, especialidad, telefono, email, dias_atencion,
-    hora_inicio, hora_fin, duracion_cita_min, hora_inicio_sabado, hora_fin_sabado)
+    hora_inicio, hora_fin, duracion_cita_min, hora_inicio_sabado, hora_fin_sabado, buffer_domicilio_min)
   values (trim(p_nombre), trim(p_especialidad), p_telefono, v_email, p_dias,
-    p_hora_inicio, p_hora_fin, p_duracion, p_hora_inicio_sabado, p_hora_fin_sabado)
+    p_hora_inicio, p_hora_fin, p_duracion, p_hora_inicio_sabado, p_hora_fin_sabado,
+    coalesce(p_buffer_domicilio_min, 30))
   returning id into v_medico_id;
 
   insert into public.perfiles (user_id, nombre, rol, medico_id)
@@ -558,8 +649,8 @@ begin
 end;
 $$;
 
-grant execute on function public.crear_medico_admin(text, text, text, text, jsonb, time, time, int, text, time, time) to authenticated;
-revoke all on function public.crear_medico_admin(text, text, text, text, jsonb, time, time, int, text, time, time) from public;
+grant execute on function public.crear_medico_admin(text, text, text, text, jsonb, time, time, int, text, time, time, int) to authenticated;
+revoke all on function public.crear_medico_admin(text, text, text, text, jsonb, time, time, int, text, time, time, int) from public;
 
 -- Edita médico (puede cambiar email y contraseña de acceso)
 create or replace function public.actualizar_medico_admin(
@@ -574,7 +665,8 @@ create or replace function public.actualizar_medico_admin(
   p_duracion int,
   p_contrasena text default null,
   p_hora_inicio_sabado time default null,
-  p_hora_fin_sabado time default null
+  p_hora_fin_sabado time default null,
+  p_buffer_domicilio_min int default 30
 )
 returns jsonb
 language plpgsql security definer set search_path = public
@@ -642,7 +734,8 @@ begin
   set nombre = trim(p_nombre), especialidad = trim(p_especialidad), telefono = p_telefono,
       email = v_email, dias_atencion = p_dias, hora_inicio = p_hora_inicio, hora_fin = p_hora_fin,
       duracion_cita_min = p_duracion,
-      hora_inicio_sabado = p_hora_inicio_sabado, hora_fin_sabado = p_hora_fin_sabado
+      hora_inicio_sabado = p_hora_inicio_sabado, hora_fin_sabado = p_hora_fin_sabado,
+      buffer_domicilio_min = coalesce(p_buffer_domicilio_min, 30)
   where id = p_id;
 
   update public.perfiles set nombre = trim(p_nombre) where medico_id = p_id;
@@ -651,8 +744,8 @@ begin
 end;
 $$;
 
-grant execute on function public.actualizar_medico_admin(uuid, text, text, text, text, jsonb, time, time, int, text, time, time) to authenticated;
-revoke all on function public.actualizar_medico_admin(uuid, text, text, text, text, jsonb, time, time, int, text, time, time) from public;
+grant execute on function public.actualizar_medico_admin(uuid, text, text, text, text, jsonb, time, time, int, text, time, time, int) to authenticated;
+revoke all on function public.actualizar_medico_admin(uuid, text, text, text, text, jsonb, time, time, int, text, time, time, int) from public;
 
 -- Elimina médico (solo si no tiene citas) junto con su usuario de acceso
 create or replace function public.eliminar_medico_admin(p_id uuid)

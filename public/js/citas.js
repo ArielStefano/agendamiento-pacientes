@@ -85,15 +85,17 @@ function renderTabla() {
   }
 
   const puedeEditar = app.isAdminOrRecepcion;
+  const esMedico = app.user && app.user.rol === "medico";
   const filas = listaCitas
     .map((c) => {
       const botones = [];
-      if (ESTADO_NEXT[c.estado]) {
+      const esMiCita = esMedico && app.user.medico_id && c.medicos && c.medicos.id === app.user.medico_id;
+      if (ESTADO_NEXT[c.estado] && (puedeEditar || esMiCita)) {
         const next = ESTADO_NEXT[c.estado];
         const label = c.estado === "solicitada" ? "✓ Aprobar" : next === "confirmada" ? "✓ Confirmar" : "✓ Completar";
         botones.push(`<button class="btn btn-sm btn-success" onclick="cambiarEstado('${c.id}', '${next}')">${label}</button>`);
       }
-      if (c.estado !== "cancelada") {
+      if (c.estado !== "cancelada" && (puedeEditar || esMiCita)) {
         botones.push(`<button class="btn btn-sm btn-secondary" onclick="cambiarEstado('${c.id}', 'cancelada')">✕ Cancelar</button>`);
       }
       if (puedeEditar) {
@@ -193,7 +195,7 @@ async function cargarDisponibilidad() {
 
   const citasRes = await supabase
     .from("citas")
-    .select("hora, duracion_min")
+    .select("hora, duracion_min, lugar, estado")
     .eq("medico_id", medicoId)
     .eq("fecha", fecha)
     .neq("estado", "cancelada");
@@ -215,8 +217,8 @@ function calcularSlots(medico, fecha, citas) {
   if (!dias.includes(diaSemana)) return [];
 
   const dur = medico.duracion_cita_min || 30;
+  const bufferDom = medico.buffer_domicilio_min || 0;
 
-  // Usar horario de sábado si aplica
   let inicio, fin;
   if (diaSemana === "Sabado" && medico.hora_inicio_sabado && medico.hora_fin_sabado) {
     inicio = toMin(medico.hora_inicio_sabado);
@@ -226,12 +228,22 @@ function calcularSlots(medico, fecha, citas) {
     fin = toMin(medico.hora_fin);
   }
 
-  const ocupados = citas.map((c) => ({ i: toMin(c.hora), f: toMin(c.hora) + c.duracion_min }));
+  const ocupados = citas.map((c) => ({ i: toMin(c.hora), f: toMin(c.hora) + c.duracion_min, l: c.lugar, e: c.estado }));
 
   const slots = [];
   for (let t = inicio; t + dur <= fin; t += dur) {
     const conflicto = ocupados.some((o) => t < o.f && o.i < t + dur);
-    if (!conflicto) slots.push(toHHMM(t));
+    if (conflicto) continue;
+
+    // Buffer domicilio: bloquear slot si una cita domicilio termina dentro del buffer antes de este slot
+    if (bufferDom > 0) {
+      const bloqueado = ocupados.some((o) =>
+        o.l === "domicilio" && o.e === "completada" && o.f > t - bufferDom && o.f <= t
+      );
+      if (bloqueado) continue;
+    }
+
+    slots.push(toHHMM(t));
   }
   return slots;
 }

@@ -17,6 +17,11 @@ function toISO(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function toMin(t) {
+  const [h, m] = String(t).split(":").map(Number);
+  return h * 60 + m;
+}
+
 async function initCalendario() {
   const res = await supabase.from("medicos").select("*").order("nombre");
   if (res.error) return toast(res.error.message, "error");
@@ -79,13 +84,11 @@ function renderCalendario(medico, citas) {
 
   const diasAtencion = (medico.dias_atencion || []).map((d) => d.toLowerCase());
 
-  // Horario principal (Lun-Vie)
   const horaIni = Number(medico.hora_inicio.slice(0, 2));
   const minIni = Number(medico.hora_inicio.slice(3, 5));
   const horaFin = Number(medico.hora_fin.slice(0, 2));
   const minFin = Number(medico.hora_fin.slice(3, 5));
 
-  // Horario sábado (si existe)
   const tieneSabado = medico.hora_inicio_sabado && medico.hora_fin_sabado;
   let horaIniSab = horaIni, minIniSab = minIni, horaFinSab = horaFin, minFinSab = minFin;
   if (tieneSabado) {
@@ -95,8 +98,30 @@ function renderCalendario(medico, citas) {
     minFinSab = Number(medico.hora_fin_sabado.slice(3, 5));
   }
 
-  // Slots de tiempo: unir ambos rangos (sin duplicados), usando la duración del médico
   const dur = medico.duracion_cita_min || 30;
+  const bufferDom = medico.buffer_domicilio_min || 0;
+
+  // Pre-calcular slots bloqueados por buffer domicilio por fecha
+  const bloqueadosPorBuffer = {};
+  if (bufferDom > 0) {
+    for (const c of citas) {
+      if (c.lugar === "domicilio" && c.estado === "completada") {
+        const finCita = toMin(c.hora) + c.duracion_min;
+        const finBuf = finCita + bufferDom;
+        if (!bloqueadosPorBuffer[c.fecha]) bloqueadosPorBuffer[c.fecha] = [];
+        bloqueadosPorBuffer[c.fecha].push({ inicio: finCita, fin: finBuf });
+      }
+    }
+  }
+
+  function esSlotBloqueado(fecha, hora) {
+    if (bufferDom <= 0) return false;
+    const bloques = bloqueadosPorBuffer[fecha];
+    if (!bloques) return false;
+    const hm = toMin(hora);
+    return bloques.some((b) => hm >= b.inicio && hm < b.fin);
+  }
+
   const horasSet = new Set();
   function agregarRango(hIni, mIni, hFin, mFin) {
     let t = hIni * 60 + mIni;
@@ -145,7 +170,11 @@ function renderCalendario(medico, citas) {
       if (!cellHtml && !esLaboral) {
         html += `<div class="cal-cell" style="background:#f8fafc"></div>`;
       } else if (!cellHtml && esLaboral && esFuturo && app.user && app.user.rol === "paciente") {
-        html += `<div class="cal-cell cal-slot" onclick="abrirAgendar('${fecha}','${hora}')" title="Agendar: ${hora}">${hora}</div>`;
+        if (esSlotBloqueado(fecha, hora)) {
+          html += `<div class="cal-cell" style="background:#fef3c7" title="En ruta (traslado)"></div>`;
+        } else {
+          html += `<div class="cal-cell cal-slot" onclick="abrirAgendar('${fecha}','${hora}')" title="Agendar: ${hora}">${hora}</div>`;
+        }
       } else {
         html += `<div class="cal-cell">${cellHtml}</div>`;
       }

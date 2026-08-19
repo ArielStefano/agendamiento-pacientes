@@ -31,7 +31,8 @@ function fmtAgenda(m) {
   const sabado = m.hora_inicio_sabado && m.hora_fin_sabado
     ? ` | Sáb: ${fmtHorario(m.hora_inicio_sabado, m.hora_fin_sabado)}`
     : "";
-  return `${esc(dias.join(", "))}<br>${principal}${sabado} · ${m.duracion_cita_min} min`;
+  const buffer = m.buffer_domicilio_min ? ` · Traslado: ${m.buffer_domicilio_min} min` : "";
+  return `${esc(dias.join(", "))}<br>${principal}${sabado} · ${m.duracion_cita_min} min${buffer}`;
 }
 
 function renderTabla() {
@@ -92,6 +93,7 @@ function abrirModalMedico(medico = null) {
   document.getElementById("m-email").value = medico ? medico.email || "" : "";
   document.getElementById("m-pass").value = "";
   document.getElementById("m-duracion").value = medico ? medico.duracion_cita_min : 30;
+  document.getElementById("m-buffer").value = medico ? (medico.buffer_domicilio_min || 30) : 30;
   document.getElementById("m-inicio").value = medico ? app.hhmm(medico.hora_inicio) : "08:00";
   document.getElementById("m-fin").value = medico ? app.hhmm(medico.hora_fin) : "17:00";
   document.getElementById("m-pass-label").textContent = medico
@@ -158,6 +160,7 @@ async function guardarMedico() {
   const email = document.getElementById("m-email").value.trim();
   const pass = document.getElementById("m-pass").value;
   const duracion = Number(document.getElementById("m-duracion").value);
+  const buffer = Number(document.getElementById("m-buffer").value) || 30;
   const inicio = document.getElementById("m-inicio").value + ":00";
   const fin = document.getElementById("m-fin").value + ":00";
   const dias = diasSeleccionados();
@@ -194,6 +197,7 @@ async function guardarMedico() {
       p_duracion: duracion,
       p_hora_inicio_sabado: hora_inicio_sabado,
       p_hora_fin_sabado: hora_fin_sabado,
+      p_buffer_domicilio_min: buffer,
     };
     if (pass) params.p_contrasena = pass;
     ({ data: datos, error } = await supabase.rpc("actualizar_medico_admin", params));
@@ -212,6 +216,7 @@ async function guardarMedico() {
       p_contrasena: pass,
       p_hora_inicio_sabado: hora_inicio_sabado,
       p_hora_fin_sabado: hora_fin_sabado,
+      p_buffer_domicilio_min: buffer,
     }));
     if (!error) {
       toast("Médico creado correctamente", "success");
