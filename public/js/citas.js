@@ -4,6 +4,7 @@ let listaCitas = [];
 let listaPacientes = [];
 let listaMedicos = [];
 let slotSeleccionado = null;
+let citaACancelar = null;
 
 const ESTADO_NEXT = {
   solicitada: "confirmada",
@@ -54,7 +55,7 @@ async function aplicarFiltros() {
   const buscar = (document.getElementById("f-buscar")?.value || "").trim();
   let query = supabase
     .from("citas")
-    .select("id, fecha, hora, motivo, lugar, estado, pacientes(id, nombre, telefono), medicos(id, nombre, especialidad)")
+    .select("id, fecha, hora, motivo, lugar, estado, motivo_cancelacion, pacientes(id, nombre, telefono), medicos(id, nombre, especialidad)")
     .order("fecha", { ascending: true })
     .order("hora", { ascending: true });
 
@@ -111,7 +112,7 @@ function renderTabla() {
         const label = c.estado === "solicitada" ? "✓ Aprobar" : next === "confirmada" ? "✓ Confirmar" : "✓ Completar";
         botones.push(`<button class="btn btn-sm btn-success" onclick="cambiarEstado('${c.id}', '${next}')">${label}</button>`);
       }
-      if (c.estado !== "cancelada" && (puedeEditar || esMiCita || esPacienteMio)) {
+      if (!["cancelada", "cancelada_clausula"].includes(c.estado) && (puedeEditar || esMiCita || esPacienteMio)) {
         botones.push(`<button class="btn btn-sm btn-secondary" onclick="cambiarEstado('${c.id}', 'cancelada')">✕ Cancelar</button>`);
       }
       if (puedeEditar) {
@@ -127,7 +128,7 @@ function renderTabla() {
         <td>${esc((c.medicos && c.medicos.nombre) || "")} <span class="muted small">(${esc((c.medicos && c.medicos.especialidad) || "")})</span></td>
         <td>${c.lugar === "domicilio" ? "🏠 Domicilio" : "🏥 Consultorio"}</td>
         <td>${esc(c.motivo || "-")}</td>
-        <td><span class="badge ${c.estado}">${c.estado}</span></td>
+        <td><span class="badge ${c.estado}">${c.estado === "cancelada_clausula" ? "Cláusula" : c.estado}</span>${c.motivo_cancelacion ? `<br><span class="muted small" title="${esc(c.motivo_cancelacion)}">${esc(c.motivo_cancelacion.length > 40 ? c.motivo_cancelacion.slice(0, 40) + "..." : c.motivo_cancelacion)}</span>` : ""}</td>
         <td>
           <div class="row-actions">${botones.join("")}</div>
         </td>
@@ -334,10 +335,88 @@ function editarCita(id) {
 }
 
 async function cambiarEstado(id, estado) {
+  if (estado === "cancelada" && app.user && app.user.rol === "paciente") {
+    abrirModalCancelar(id);
+    return;
+  }
   const { error } = await supabase.rpc("cambiar_estado_cita", { p_id: id, p_estado: estado });
   if (error) return toast(error.message, "error");
   toast(`Cita marcada como ${estado}`, "success");
   aplicarFiltros();
+}
+
+function abrirModalCancelar(id) {
+  const cita = listaCitas.find((c) => c.id === id);
+  if (!cita) return;
+  citaACancelar = cita;
+
+  const fechaCita = cita.fecha || "";
+  const horaCita = cita.hora || "";
+
+  const now = new Date();
+  const citaDate = new Date(fechaCita + "T" + horaCita);
+  const horasAntes = (citaDate - now) / (1000 * 60 * 60);
+
+  const aviso = document.getElementById("cancelar-aviso");
+  const titulo = document.getElementById("cancelar-titulo");
+  const btnConfirmar = document.getElementById("btn-confirmar-cancelar");
+
+  document.getElementById("cancel-motivo").value = "";
+
+  if (horasAntes < 24) {
+    aviso.style.display = "block";
+    aviso.textContent = "⚠️ La cancelación se realiza con menos de 24 horas de anticipación. Se aplicará cláusula administrativa (cargo del valor de la cita). Si es caso de fuerza mayor, indíquelo en el motivo.";
+    titulo.textContent = "Cancelar cita — Cláusula administrativa";
+    btnConfirmar.textContent = "Aceptar cláusula y cancelar";
+  } else {
+    aviso.style.display = "none";
+    titulo.textContent = "Cancelar cita";
+    btnConfirmar.textContent = "Confirmar cancelación";
+  }
+
+  document.getElementById("modal-cancelar").classList.add("open");
+}
+
+function cerrarModalCancelar() {
+  document.getElementById("modal-cancelar").classList.remove("open");
+  citaACancelar = null;
+}
+
+async function confirmarModalCancelar() {
+  if (!citaACancelar) return;
+  const motivo = document.getElementById("cancel-motivo").value.trim();
+  const btn = document.getElementById("btn-confirmar-cancelar");
+
+  const fechaCita = citaACancelar.fecha || "";
+  const horaCita = citaACancelar.hora || "";
+  const now = new Date();
+  const citaDate = new Date(fechaCita + "T" + horaCita);
+  const horasAntes = (citaDate - now) / (1000 * 60 * 60);
+
+  if (horasAntes >= 24 && !motivo) {
+    toast("Debe indicar el motivo de cancelación", "error");
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Cancelando...";
+
+  try {
+    const { error } = await supabase.rpc("cambiar_estado_cita", {
+      p_id: citaACancelar.id,
+      p_estado: "cancelada",
+      p_motivo_cancelacion: motivo || null,
+    });
+    if (error) throw new Error(error.message);
+    toast("Cita cancelada correctamente", "success");
+    cerrarModalCancelar();
+    aplicarFiltros();
+  } catch (err) {
+    toast(err.message, "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Confirmar cancelación";
+  }
 }
 
 async function eliminarCita(id) {
@@ -360,6 +439,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   initCitas().catch((e) => toast(e.message, "error"));
   document.getElementById("modal-cita").addEventListener("click", (e) => {
     if (e.target === document.getElementById("modal-cita")) cerrarModalCita();
+  });
+  document.getElementById("modal-cancelar").addEventListener("click", (e) => {
+    if (e.target === document.getElementById("modal-cancelar")) cerrarModalCancelar();
   });
 
   // Auto-abrir modal de nueva cita si se llega con ?nueva=true

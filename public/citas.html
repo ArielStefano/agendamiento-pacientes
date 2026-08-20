@@ -46,6 +46,7 @@
               <option value="confirmada">Confirmada</option>
               <option value="completada">Completada</option>
               <option value="cancelada">Cancelada</option>
+              <option value="cancelada_clausula">Cláusula administrativa</option>
             </select>
             <input type="date" id="f-desde" onchange="aplicarFiltros()" aria-label="Fecha desde" />
             <input type="date" id="f-hasta" onchange="aplicarFiltros()" aria-label="Fecha hasta" />
@@ -102,6 +103,21 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="cerrarModalCita()">Cancelar</button>
         <button class="btn" onclick="guardarCita()">Guardar cita</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modal-cancelar" role="dialog" aria-modal="true" aria-label="Cancelar cita">
+    <div class="modal">
+      <h3 id="cancelar-titulo">Cancelar cita</h3>
+      <div id="cancelar-aviso" class="alert alert-warning" style="display:none"></div>
+      <div class="field">
+        <label for="cancel-motivo">Motivo de cancelación *</label>
+        <textarea id="cancel-motivo" rows="3" placeholder="Indique el motivo de la cancelación..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="cerrarModalCancelar()">Volver</button>
+        <button class="btn btn-danger" id="btn-confirmar-cancelar" onclick="confirmarModalCancelar()">Confirmar cancelación</button>
       </div>
     </div>
   </div>

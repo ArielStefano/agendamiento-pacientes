@@ -214,6 +214,7 @@ function irHoy() {
 }
 
 function verDetalle(cita) {
+  citaActual = cita;
   const paciente = cita.pacientes || {};
   const debeAnonimizar = app.config.anonimizar_pacientes !== false && app.user && app.user.rol === "paciente";
   const esMiCita = debeAnonimizar && paciente.id === app.user.paciente_id;
@@ -242,13 +243,80 @@ function cerrarDetalle() {
   document.getElementById("modal-detalle").classList.remove("open");
 }
 
-async function cancelarMiCita(citaId) {
-  if (!confirm("¿Está seguro de cancelar esta cita?")) return;
-  const { error } = await supabase.rpc("cambiar_estado_cita", { p_id: citaId, p_estado: "cancelada" });
-  if (error) return toast(error.message, "error");
-  toast("Cita cancelada", "success");
-  cerrarDetalle();
-  cargarSemana();
+let citaACancelar = null;
+let citaActual = null;
+
+function cancelarMiCita(citaId) {
+  citaACancelar = citaActual;
+
+  const fechaCita = (citaActual && citaActual.fecha) || "";
+  const horaCita = (citaActual && citaActual.hora) || "";
+
+  const now = new Date();
+  const citaDate = new Date(fechaCita + "T" + horaCita);
+  const horasAntes = (citaDate - now) / (1000 * 60 * 60);
+
+  const aviso = document.getElementById("cancelar-aviso");
+  const titulo = document.getElementById("cancelar-titulo");
+  const btnConfirmar = document.getElementById("btn-confirmar-cancelar");
+
+  document.getElementById("cancel-motivo").value = "";
+
+  if (horasAntes < 24) {
+    aviso.style.display = "block";
+    aviso.textContent = "⚠️ La cancelación se realiza con menos de 24 horas de anticipación. Se aplicará cláusula administrativa (cargo del valor de la cita). Si es caso de fuerza mayor, indíquelo en el motivo.";
+    titulo.textContent = "Cancelar cita — Cláusula administrativa";
+    btnConfirmar.textContent = "Aceptar cláusula y cancelar";
+  } else {
+    aviso.style.display = "none";
+    titulo.textContent = "Cancelar cita";
+    btnConfirmar.textContent = "Confirmar cancelación";
+  }
+
+  document.getElementById("modal-cancelar").classList.add("open");
+}
+
+function cerrarCancelar() {
+  document.getElementById("modal-cancelar").classList.remove("open");
+  citaACancelar = null;
+}
+
+async function confirmarCancelar() {
+  if (!citaACancelar) return;
+  const motivo = document.getElementById("cancel-motivo").value.trim();
+  const btn = document.getElementById("btn-confirmar-cancelar");
+
+  const fechaCita = citaACancelar.fecha || "";
+  const horaCita = citaACancelar.hora || "";
+  const now = new Date();
+  const citaDate = new Date(fechaCita + "T" + horaCita);
+  const horasAntes = (citaDate - now) / (1000 * 60 * 60);
+
+  if (horasAntes >= 24 && !motivo) {
+    toast("Debe indicar el motivo de cancelación", "error");
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Cancelando...";
+
+  try {
+    const { error } = await supabase.rpc("cambiar_estado_cita", {
+      p_id: citaACancelar.id,
+      p_estado: "cancelada",
+      p_motivo_cancelacion: motivo || null,
+    });
+    if (error) throw new Error(error.message);
+    toast("Cita cancelada correctamente", "success");
+    cerrarCancelar();
+    cerrarDetalle();
+    cargarSemana();
+  } catch (err) {
+    toast(err.message, "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Confirmar cancelación";
+  }
 }
 
 function abrirAgendar(fecha, hora) {
@@ -317,6 +385,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
   document.getElementById("modal-agendar").addEventListener("click", (e) => {
     if (e.target === document.getElementById("modal-agendar")) cerrarAgendar();
+  });
+  document.getElementById("modal-cancelar").addEventListener("click", (e) => {
+    if (e.target === document.getElementById("modal-cancelar")) cerrarCancelar();
   });
 
   const calEl = document.getElementById("calendario");

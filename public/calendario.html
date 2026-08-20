@@ -80,6 +80,21 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="modal-cancelar" role="dialog" aria-modal="true" aria-label="Cancelar cita">
+    <div class="modal">
+      <h3 id="cancelar-titulo">Cancelar cita</h3>
+      <div id="cancelar-aviso" class="alert alert-warning" style="display:none"></div>
+      <div class="field">
+        <label for="cancel-motivo">Motivo de cancelación *</label>
+        <textarea id="cancel-motivo" rows="3" placeholder="Indique el motivo de la cancelación..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="cerrarCancelar()">Volver</button>
+        <button class="btn btn-danger" id="btn-confirmar-cancelar" onclick="confirmarCancelar()">Confirmar cancelación</button>
+      </div>
+    </div>
+  </div>
+
   <script src="js/config.js"></script>
   <script src="vendor/supabase.min.js"></script>
   <script src="js/layout.js" defer></script>
