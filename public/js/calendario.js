@@ -300,4 +300,30 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("modal-agendar").addEventListener("click", (e) => {
     if (e.target === document.getElementById("modal-agendar")) cerrarAgendar();
   });
+
+  const calEl = document.getElementById("calendario");
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let swiping = false;
+  calEl.addEventListener("touchstart", (e) => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    swiping = false;
+  }, { passive: true });
+  calEl.addEventListener("touchmove", (e) => {
+    const dx = e.touches[0].clientX - touchStartX;
+    const dy = e.touches[0].clientY - touchStartY;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 15) {
+      swiping = true;
+    }
+  }, { passive: true });
+  calEl.addEventListener("touchend", (e) => {
+    if (!swiping) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 50) {
+      if (dx < 0) cambiarSemana(1);
+      else cambiarSemana(-1);
+    }
+    swiping = false;
+  }, { passive: true });
 });
