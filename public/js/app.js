@@ -301,6 +301,10 @@ function esc(str) {
   return div.innerHTML;
 }
 
+function escapeHTML(str) {
+  return esc(str);
+}
+
 function toast(message, type = "") {
   const icons = { success: "\u2705", error: "\u274C", warning: "\u26A0\uFE0F", info: "\u2139\uFE0F" };
   const t = document.createElement("div");
