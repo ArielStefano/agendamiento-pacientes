@@ -3,6 +3,22 @@
 document.addEventListener("DOMContentLoaded", async () => {
   await window.appReady;
   if (!app.user) return;
+
+  const content = document.getElementById("dashboard-content");
+  if (content) {
+    content.innerHTML = `
+      <div class="grid grid-4 mb-16">
+        <div class="card"><div class="skeleton" style="height:20px;width:60px;margin:0 auto 8px"></div><div class="skeleton" style="height:32px;width:40px;margin:0 auto"></div></div>
+        <div class="card"><div class="skeleton" style="height:20px;width:60px;margin:0 auto 8px"></div><div class="skeleton" style="height:32px;width:40px;margin:0 auto"></div></div>
+        <div class="card"><div class="skeleton" style="height:20px;width:60px;margin:0 auto 8px"></div><div class="skeleton" style="height:32px;width:40px;margin:0 auto"></div></div>
+        <div class="card"><div class="skeleton" style="height:20px;width:60px;margin:0 auto 8px"></div><div class="skeleton" style="height:32px;width:40px;margin:0 auto"></div></div>
+      </div>
+      <div class="grid grid-2">
+        <div class="card"><div class="skeleton" style="height:20px;width:120px;margin-bottom:12px"></div><div class="skeleton" style="height:16px;margin-bottom:6px"></div><div class="skeleton" style="height:16px;margin-bottom:6px"></div><div class="skeleton" style="height:16px"></div></div>
+        <div class="card"><div class="skeleton" style="height:20px;width:160px;margin-bottom:12px"></div><div class="skeleton" style="height:16px;margin-bottom:6px"></div><div class="skeleton" style="height:16px;margin-bottom:6px"></div><div class="skeleton" style="height:16px"></div></div>
+      </div>`;
+  }
+
   const hoy = app.hoyISO();
   const en7 = app.addDaysISO(7);
 

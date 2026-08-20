@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Configuración | CliniAgenda</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-180.png" />
+  <meta name="theme-color" content="#0ea5e9" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="CliniAgenda" />
+  <link rel="preconnect" href="https://xgfwcrdrkzcoxepnicfb.supabase.co" crossorigin />
+  <link rel="dns-prefetch" href="https://xgfwcrdrkzcoxepnicfb.supabase.co" />
+  <meta name="description" content="Configuración general del sistema CliniAgenda. Administra parámetros de la clínica, anonymización de pacientes y recordatorios." />
+  <script src="js/security.js"></script>
+  <link rel="canonical" href="https://arielstefano.github.io/agendamiento-pacientes/configuracion.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="es_ES" />
+  <meta property="og:site_name" content="CliniAgenda" />
+  <meta property="og:title" content="Configuración | CliniAgenda" />
+  <meta property="og:description" content="Configuración general del sistema CliniAgenda. Administra parámetros de la clínica, anonymización de pacientes y recordatorios." />
+  <meta property="og:url" content="https://arielstefano.github.io/agendamiento-pacientes/configuracion.html" />
+  <meta property="og:image" content="https://arielstefano.github.io/agendamiento-pacientes/icons/icon-512.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Configuración | CliniAgenda" />
+  <meta name="twitter:description" content="Configuración general del sistema CliniAgenda. Administra parámetros de la clínica, anonymización de pacientes y recordatorios." />
+</head>
+<body data-title="Configuración">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div class="main">
+      <header class="topbar" id="topbar"></header>
+      <main class="content">
+        <h2 style="margin-bottom:16px">Configuración del sistema</h2>
+
+        <div class="grid grid-2">
+          <div class="card">
+            <h3 style="margin-bottom:14px">🏢 Datos de la clínica</h3>
+            <div class="field">
+              <label for="cfg-clinica-nombre">Nombre de la clínica</label>
+              <input type="text" id="cfg-clinica-nombre" placeholder="Ej. Clínica San Rafael" />
+            </div>
+            <div class="field">
+              <label for="cfg-clinica-telefono">Teléfono de contacto</label>
+              <input type="tel" id="cfg-clinica-telefono" placeholder="Ej. 02 123 4567" />
+            </div>
+            <div class="field">
+              <label for="cfg-clinica-direccion">Dirección</label>
+              <input type="text" id="cfg-clinica-direccion" placeholder="Ej. Av. Principal 123" />
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 style="margin-bottom:14px">🔒 Privacidad y seguridad</h3>
+            <div class="field">
+              <label>
+                <input type="checkbox" id="cfg-anonimizar" style="margin-right:8px" />
+                Los pacientes solo ven sus propias citas (otros aparecen como "Reservado")
+              </label>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 style="margin-bottom:14px">⏱️ Valores predeterminados</h3>
+            <div class="field">
+              <label for="cfg-duracion">Duración default de citas (minutos)</label>
+              <input type="number" id="cfg-duracion" min="15" max="180" step="5" />
+            </div>
+            <div class="field">
+              <label for="cfg-buffer">Buffer traslado domicilio (minutos)</label>
+              <input type="number" id="cfg-buffer" min="0" max="120" step="5" />
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 style="margin-bottom:14px">🔔 Recordatorios</h3>
+            <div class="field">
+              <label for="cfg-recordatorios-horas">Horas antes para generar recordatorios</label>
+              <input type="number" id="cfg-recordatorios-horas" min="1" max="168" step="1" />
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px; text-align:right">
+          <button class="btn" id="btn-guardar" onclick="guardarConfig()">Guardar configuración</button>
+        </div>
+
+        <nav class="seo-links" style="margin-top:24px; padding:12px; border-top:1px solid var(--border); font-size:13px; color:var(--text-muted);" aria-label="Enlaces internos">
+          <a href="dashboard.html" style="margin-right:12px;">Inicio</a>
+          <a href="citas.html" style="margin-right:12px;">Citas</a>
+          <a href="calendario.html" style="margin-right:12px;">Calendario</a>
+          <a href="pacientes.html" style="margin-right:12px;">Pacientes</a>
+          <a href="medicos.html">Médicos</a>
+        </nav>
+      </main>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="vendor/supabase.min.js"></script>
+  <script src="js/layout.js" defer></script>
+  <script src="js/app.js" defer></script>
+  <script src="js/configuracion.js" defer></script>
+  <script src="js/pwa.js" defer></script>
+</body>
+</html>

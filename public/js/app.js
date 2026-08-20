@@ -11,6 +11,7 @@ const app = {
   user: null,
   isMedico: false,
   isAdminOrRecepcion: false,
+  config: {},
 
   async init() {
     const { data, error } = await supabase.auth.getSession();
@@ -48,6 +49,20 @@ const app = {
     this.setupBell();
     this.loadNotifications();
     this.setupMobileMenu();
+    this.loadConfig();
+    this.setupFAB();
+    this.setupPullToRefresh();
+  },
+
+  async loadConfig() {
+    try {
+      const { data } = await supabase.rpc("leer_configuracion");
+      if (data) {
+        for (const row of data) {
+          this.config[row.clave] = row.valor;
+        }
+      }
+    } catch (e) { /* silencioso */ }
   },
 
   async logout() {
@@ -66,6 +81,7 @@ const app = {
       { href: "pacientes.html", icon: "🧑‍🤝‍🧑", label: "Pacientes", show: this.isAdminOrRecepcion },
       { href: "medicos.html", icon: "🩺", label: "Médicos", show: this.user.rol === "admin" },
       { href: "recordatorios.html", icon: "🔔", label: "Recordatorios", show: this.user.rol === "admin" },
+      { href: "configuracion.html", icon: "⚙️", label: "Configuración", show: this.user.rol === "admin" },
     ];
 
     const current = window.location.pathname.split("/").pop();
@@ -137,9 +153,9 @@ const app = {
       list.innerHTML = data
         .map(
           (n) => {
-            const esPaciente = this.user && this.user.rol === "paciente";
-            const esMiNotif = esPaciente && n.pacientes && n.pacientes.id === this.user.paciente_id;
-            const nombrePaciente = esPaciente && !esMiNotif ? "Un paciente" : esc((n.pacientes && n.pacientes.nombre) || "");
+            const debeAnonimizar = this.config.anonimizar_pacientes !== false && this.user && this.user.rol === "paciente";
+            const esMiNotif = debeAnonimizar && n.pacientes && n.pacientes.id === this.user.paciente_id;
+            const nombrePaciente = debeAnonimizar && !esMiNotif ? "Un paciente" : esc((n.pacientes && n.pacientes.nombre) || "");
             return `
           <div class="notif">
             <div>🔔 ${esc(n.mensaje)}</div>
@@ -189,6 +205,67 @@ const app = {
     sidebar.querySelectorAll("nav a").forEach((a) => {
       a.addEventListener("click", close);
     });
+  },
+
+  setupFAB() {
+    if (this.isAdminOrRecepcion) {
+      const fab = document.createElement("button");
+      fab.className = "fab";
+      fab.id = "fab-nueva-cita";
+      fab.setAttribute("aria-label", "Nueva cita");
+      fab.textContent = "+";
+      fab.addEventListener("click", () => {
+        window.location.href = "citas.html?nueva=true";
+      });
+      document.body.appendChild(fab);
+    } else if (this.user && this.user.rol === "paciente") {
+      const fab = document.createElement("button");
+      fab.className = "fab";
+      fab.id = "fab-agendar";
+      fab.setAttribute("aria-label", "Agendar cita");
+      fab.textContent = "+";
+      fab.addEventListener("click", () => {
+        window.location.href = "calendario.html";
+      });
+      document.body.appendChild(fab);
+    }
+  },
+
+  setupPullToRefresh() {
+    const content = document.querySelector(".content");
+    if (!content) return;
+
+    let startY = 0;
+    let pulling = false;
+    let indicator = null;
+
+    content.addEventListener("touchstart", (e) => {
+      if (content.scrollTop === 0) {
+        startY = e.touches[0].clientY;
+        pulling = true;
+      }
+    }, { passive: true });
+
+    content.addEventListener("touchmove", (e) => {
+      if (!pulling) return;
+      const dy = e.touches[0].clientY - startY;
+      if (dy > 40 && !indicator) {
+        indicator = document.createElement("div");
+        indicator.className = "pull-indicator show";
+        indicator.textContent = "↑ Actualizar";
+        document.body.appendChild(indicator);
+      }
+    }, { passive: true });
+
+    content.addEventListener("touchend", () => {
+      if (indicator) {
+        indicator.textContent = "Actualizando...";
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      }
+      pulling = false;
+    }, { passive: true });
   },
 
   formatDate(value) {
