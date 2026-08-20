@@ -136,11 +136,16 @@ const app = {
       }
       list.innerHTML = data
         .map(
-          (n) => `
+          (n) => {
+            const esPaciente = this.user && this.user.rol === "paciente";
+            const esMiNotif = esPaciente && n.pacientes && n.pacientes.id === this.user.paciente_id;
+            const nombrePaciente = esPaciente && !esMiNotif ? "Un paciente" : esc((n.pacientes && n.pacientes.nombre) || "");
+            return `
           <div class="notif">
             <div>🔔 ${esc(n.mensaje)}</div>
-            <div class="when">${this.formatDate(n.fecha_programada)} · Paciente: ${esc((n.pacientes && n.pacientes.nombre) || "")}</div>
-          </div>`
+            <div class="when">${this.formatDate(n.fecha_programada)} · Paciente: ${nombrePaciente}</div>
+          </div>`;
+          }
         )
         .join("");
     } catch (e) {

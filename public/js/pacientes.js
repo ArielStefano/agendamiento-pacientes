@@ -194,6 +194,10 @@ function cerrarDetalle() {
 document.addEventListener("DOMContentLoaded", async () => {
   await window.appReady;
   if (!app.user) return;
+  if (app.user.rol !== "admin" && app.user.rol !== "recepcion") {
+    window.location.href = "dashboard.html";
+    return;
+  }
   cargarPacientes();
   const input = document.getElementById("buscar");
   input.addEventListener("input", () => {

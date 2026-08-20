@@ -71,6 +71,10 @@ async function aplicarFiltros() {
     query = query.eq("medico_id", app.user.medico_id);
   }
 
+  if (app.user && app.user.rol === "paciente" && app.user.paciente_id) {
+    query = query.eq("paciente_id", app.user.paciente_id);
+  }
+
   const { data, error } = await query;
   if (error) return toast(error.message, "error");
   listaCitas = data || [];

@@ -178,7 +178,11 @@ function renderCalendario(medico, citas) {
       const eventos = porDia(fecha).filter((c) => app.hhmm(c.hora) === hora);
       let cellHtml = "";
       for (const c of eventos) {
-        cellHtml += `<div class="cal-event ${c.estado}" onclick='verDetalle(${JSON.stringify(c).replace(/'/g, "\\u0027")})' title="${esc((c.pacientes && c.pacientes.nombre) || "")} — ${esc(c.motivo || "")}">${app.hhmm(c.hora)} · ${c.lugar === "domicilio" ? "🏠" : "🏥"} ${esc((c.pacientes && c.pacientes.nombre) || "")}</div>`;
+        const esPaciente = app.user && app.user.rol === "paciente";
+        const esMiCita = esPaciente && c.pacientes && c.pacientes.id === app.user.paciente_id;
+        const nombrePaciente = esPaciente && !esMiCita ? "Reservado" : esc((c.pacientes && c.pacientes.nombre) || "");
+        const motivoPaciente = esPaciente && !esMiCita ? "" : esc(c.motivo || "");
+        cellHtml += `<div class="cal-event ${c.estado}" onclick='verDetalle(${JSON.stringify(c).replace(/'/g, "\\u0027")})' title="${nombrePaciente}${motivoPaciente ? " — " + motivoPaciente : ""}">${app.hhmm(c.hora)} · ${c.lugar === "domicilio" ? "🏠" : "🏥"} ${nombrePaciente}</div>`;
       }
       if (!cellHtml && !esLaboral) {
         html += `<div class="cal-cell" style="background:#f8fafc"></div>`;
@@ -211,10 +215,14 @@ function irHoy() {
 
 function verDetalle(cita) {
   const paciente = cita.pacientes || {};
+  const esPaciente = app.user && app.user.rol === "paciente";
+  const esMiCita = esPaciente && paciente.id === app.user.paciente_id;
+  const nombre = esPaciente && !esMiCita ? "Reservado" : esc(paciente.nombre || "");
+  const telefono = esPaciente && !esMiCita ? "—" : esc(paciente.telefono || "-");
   document.getElementById("detalle-body").innerHTML = `
     <div class="grid grid-2">
-      <div class="field"><label>Paciente</label><div><strong>${esc(paciente.nombre || "")}</strong></div></div>
-      <div class="field"><label>Teléfono</label><div>${esc(paciente.telefono || "-")}</div></div>
+      <div class="field"><label>Paciente</label><div><strong>${nombre}</strong></div></div>
+      <div class="field"><label>Teléfono</label><div>${telefono}</div></div>
       <div class="field"><label>Fecha</label><div>${app.formatFechaLarga(cita.fecha)}</div></div>
       <div class="field"><label>Hora</label><div>${app.hhmm(cita.hora)}</div></div>
       <div class="field"><label>Lugar</label><div>${cita.lugar === "domicilio" ? "🏠 A domicilio" : "🏥 En consultorio"}</div></div>
