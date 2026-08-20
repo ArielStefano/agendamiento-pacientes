@@ -185,12 +185,12 @@ function renderCalendario(medico, citas) {
         cellHtml += `<div class="cal-event ${c.estado}" onclick='verDetalle(${JSON.stringify(c).replace(/'/g, "\\u0027")})' title="${nombrePaciente}${motivoPaciente ? " — " + motivoPaciente : ""}">${app.hhmm(c.hora)} · ${c.lugar === "domicilio" ? "🏠" : "🏥"} ${nombrePaciente}</div>`;
       }
       if (!cellHtml && !esLaboral) {
-        html += `<div class="cal-cell" style="background:#f8fafc"></div>`;
+        html += `<div class="cal-cell cal-cell-empty"></div>`;
       } else if (!cellHtml && esLaboral && esFuturo && app.user && app.user.rol === "paciente") {
         if (enDescanso(hora)) {
-          html += `<div class="cal-cell" style="background:#e0e7ff" title="Horario de descanso"></div>`;
+          html += `<div class="cal-cell cal-cell-descanso" title="Horario de descanso"></div>`;
         } else if (esSlotBloqueado(fecha, hora)) {
-          html += `<div class="cal-cell" style="background:#fef3c7" title="En ruta (traslado)"></div>`;
+          html += `<div class="cal-cell cal-cell-buffer" title="En ruta (traslado)"></div>`;
         } else {
           html += `<div class="cal-cell cal-slot" onclick="abrirAgendar('${fecha}','${hora}')" title="Agendar: ${hora}">${hora}</div>`;
         }
