@@ -26,6 +26,7 @@ function setupLayout(title) {
         <h1>${title}</h1>
       </div>
       <div class="actions">
+        <button class="theme-toggle" id="theme-toggle" title="Cambiar tema" aria-label="Cambiar modo claro/oscuro"></button>
         <div class="bell-wrap" style="position:relative">
           <button class="bell" id="bell" title="Notificaciones" aria-label="Notificaciones" aria-expanded="false" aria-haspopup="true">🔔<span class="badge" id="bell-badge" aria-hidden="true">0</span></button>
           <div class="bell-dropdown" id="bell-dropdown" role="menu" aria-label="Lista de notificaciones">
@@ -43,6 +44,24 @@ function setupLayout(title) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  const saved = localStorage.getItem("theme") || "light";
+  document.documentElement.setAttribute("data-theme", saved);
   const title = document.body.dataset.title || "Inicio";
   setupLayout(title);
+  const toggle = document.getElementById("theme-toggle");
+  if (toggle) {
+    updateToggleIcon(saved);
+    toggle.addEventListener("click", () => {
+      const current = document.documentElement.getAttribute("data-theme") || "light";
+      const next = current === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      localStorage.setItem("theme", next);
+      updateToggleIcon(next);
+    });
+  }
 });
+
+function updateToggleIcon(theme) {
+  const btn = document.getElementById("theme-toggle");
+  if (btn) btn.textContent = theme === "dark" ? "☀️" : "🌙";
+}

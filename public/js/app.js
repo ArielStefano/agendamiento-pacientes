@@ -220,15 +220,22 @@ function esc(str) {
 }
 
 function toast(message, type = "") {
+  const icons = { success: "\u2705", error: "\u274C", warning: "\u26A0\uFE0F", info: "\u2139\uFE0F" };
   const t = document.createElement("div");
   t.className = `toast ${type}`;
-  t.textContent = message;
+  t.innerHTML = `<span class="toast-icon">${icons[type] || ""}</span><span class="toast-msg">${escapeHTML(message)}</span><button class="toast-close" aria-label="Cerrar">&times;</button><div class="toast-bar"></div>`;
   document.body.appendChild(t);
   requestAnimationFrame(() => t.classList.add("show"));
-  setTimeout(() => {
-    t.classList.remove("show");
-    setTimeout(() => t.remove(), 300);
-  }, 3000);
+  t.querySelector(".toast-close").addEventListener("click", () => removeToast(t));
+  const timer = setTimeout(() => removeToast(t), type === "error" ? 6000 : 3500);
+  t._timer = timer;
+}
+
+function removeToast(el) {
+  clearTimeout(el._timer);
+  el.classList.remove("show");
+  el.classList.add("toast-exit");
+  setTimeout(() => el.remove(), 300);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
