@@ -231,6 +231,7 @@ function verDetalle(cita) {
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="cerrarDetalle()">Cerrar</button>
+      ${app.user && app.user.rol === "paciente" && (cita.estado === "solicitada" || cita.estado === "confirmada") ? `<button class="btn btn-danger" onclick="cancelarMiCita('${cita.id}')">Cancelar cita</button>` : ""}
       <a class="btn" href="citas.html">Ir a gestión de citas</a>
     </div>
   `;
@@ -239,6 +240,15 @@ function verDetalle(cita) {
 
 function cerrarDetalle() {
   document.getElementById("modal-detalle").classList.remove("open");
+}
+
+async function cancelarMiCita(citaId) {
+  if (!confirm("¿Está seguro de cancelar esta cita?")) return;
+  const { error } = await supabase.rpc("cambiar_estado_cita", { p_id: citaId, p_estado: "cancelada" });
+  if (error) return toast(error.message, "error");
+  toast("Cita cancelada", "success");
+  cerrarDetalle();
+  cargarSemana();
 }
 
 function abrirAgendar(fecha, hora) {

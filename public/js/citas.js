@@ -51,6 +51,7 @@ async function initCitas() {
 }
 
 async function aplicarFiltros() {
+  const buscar = (document.getElementById("f-buscar")?.value || "").trim();
   let query = supabase
     .from("citas")
     .select("id, fecha, hora, motivo, lugar, estado, pacientes(id, nombre, telefono), medicos(id, nombre, especialidad)")
@@ -77,7 +78,17 @@ async function aplicarFiltros() {
 
   const { data, error } = await query;
   if (error) return toast(error.message, "error");
-  listaCitas = data || [];
+
+  let filtered = data || [];
+  if (buscar) {
+    const q = buscar.toLowerCase();
+    filtered = filtered.filter((c) => {
+      const nombre = (c.pacientes && c.pacientes.nombre || "").toLowerCase();
+      return nombre.includes(q);
+    });
+  }
+
+  listaCitas = filtered;
   renderTabla();
 }
 
@@ -94,12 +105,13 @@ function renderTabla() {
     .map((c) => {
       const botones = [];
       const esMiCita = esMedico && app.user.medico_id && c.medicos && c.medicos.id === app.user.medico_id;
+      const esPacienteMio = app.user && app.user.rol === "paciente" && c.pacientes && c.pacientes.id === app.user.paciente_id;
       if (ESTADO_NEXT[c.estado] && (puedeEditar || esMiCita)) {
         const next = ESTADO_NEXT[c.estado];
         const label = c.estado === "solicitada" ? "✓ Aprobar" : next === "confirmada" ? "✓ Confirmar" : "✓ Completar";
         botones.push(`<button class="btn btn-sm btn-success" onclick="cambiarEstado('${c.id}', '${next}')">${label}</button>`);
       }
-      if (c.estado !== "cancelada" && (puedeEditar || esMiCita)) {
+      if (c.estado !== "cancelada" && (puedeEditar || esMiCita || esPacienteMio)) {
         botones.push(`<button class="btn btn-sm btn-secondary" onclick="cambiarEstado('${c.id}', 'cancelada')">✕ Cancelar</button>`);
       }
       if (puedeEditar) {

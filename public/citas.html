@@ -37,6 +37,7 @@
         <h2 style="margin-bottom:12px">Gestión de citas</h2>
         <div class="toolbar">
           <div class="left">
+            <input type="search" id="f-buscar" class="search-input" placeholder="Buscar por paciente..." aria-label="Buscar citas" oninput="aplicarFiltros()" />
             <select id="f-medico" onchange="aplicarFiltros()" aria-label="Filtrar por médico"><option value="">Todos los médicos</option></select>
             <select id="f-estado" onchange="aplicarFiltros()" aria-label="Filtrar por estado">
               <option value="">Todos los estados</option>
