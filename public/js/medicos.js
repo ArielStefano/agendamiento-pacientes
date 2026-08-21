@@ -139,8 +139,8 @@ function abrirModalMedico(medico = null) {
   document.getElementById("m-descanso-sabado-inicio").value = medico && medico.hora_inicio_descanso_sabado ? app.hhmm(medico.hora_inicio_descanso_sabado) : "";
   document.getElementById("m-descanso-sabado-fin").value = medico && medico.hora_fin_descanso_sabado ? app.hhmm(medico.hora_fin_descanso_sabado) : "";
 
-  const lugares = medico && medico.lugares_atencion ? medico.lugares_atencion.join(", ") : "Consultorio";
-  document.getElementById("m-lugares").value = lugares;
+  const lugares = medico && medico.lugares_atencion ? medico.lugares_atencion : ["Consultorio"];
+  renderLugares(lugares);
 
   document.getElementById("modal").classList.add("open");
 }
@@ -159,6 +159,55 @@ function toggleSabado() {
   } else {
     chk.disabled = false;
   }
+}
+
+function renderLugares(lugares) {
+  const container = document.getElementById("m-lugares-list");
+  container.innerHTML = "";
+  (lugares && lugares.length ? lugares : ["Consultorio"]).forEach((l, i) => {
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;gap:6px;align-items:center;margin-bottom:4px;";
+    row.innerHTML = `<input type="text" class="m-lugar-input" value="${esc(l)}" placeholder="Nombre del lugar" style="flex:1;" />` +
+      `<button type="button" class="btn btn-sm btn-danger" onclick="quitarLugar(this)" title="Quitar"${lugares && lugares.length <= 1 ? " disabled" : ""}>✕</button>`;
+    container.appendChild(row);
+  });
+  actualizarBtnAddLugar();
+}
+
+function agregarLugar() {
+  const container = document.getElementById("m-lugares-list");
+  if (container.children.length >= 5) return;
+  const row = document.createElement("div");
+  row.style.cssText = "display:flex;gap:6px;align-items:center;margin-bottom:4px;";
+  row.innerHTML = `<input type="text" class="m-lugar-input" value="" placeholder="Nombre del lugar" style="flex:1;" />` +
+    `<button type="button" class="btn btn-sm btn-danger" onclick="quitarLugar(this)" title="Quitar">✕</button>`;
+  container.appendChild(row);
+  row.querySelector("input").focus();
+  actualizarBtnAddLugar();
+}
+
+function quitarLugar(btn) {
+  const container = document.getElementById("m-lugares-list");
+  if (container.children.length <= 1) return;
+  btn.closest("div").remove();
+  actualizarBtnAddLugar();
+}
+
+function actualizarBtnAddLugar() {
+  const container = document.getElementById("m-lugares-list");
+  const btn = document.getElementById("btn-add-lugar");
+  btn.disabled = container.children.length >= 5;
+  btn.style.display = container.children.length >= 5 ? "none" : "";
+}
+
+function leerLugares() {
+  const inputs = document.querySelectorAll(".m-lugar-input");
+  const lugares = [];
+  inputs.forEach((inp) => {
+    const v = inp.value.trim();
+    if (v) lugares.push(v);
+  });
+  return lugares.length ? lugares : ["Consultorio"];
 }
 
 function editarMedico(id) {
@@ -196,8 +245,7 @@ async function guardarMedico() {
   const descansoFin = document.getElementById("m-descanso-fin").value || null;
   const descansoSabInicio = document.getElementById("m-descanso-sabado-inicio").value || null;
   const descansoSabFin = document.getElementById("m-descanso-sabado-fin").value || null;
-  const lugaresRaw = document.getElementById("m-lugares").value.trim();
-  const lugares_atencion = lugaresRaw ? lugaresRaw.split(",").map(s => s.trim()).filter(Boolean) : ["Consultorio"];
+  const lugares_atencion = leerLugares();
 
   if (!nombre) return toast("El nombre es obligatorio", "error");
   if (!especialidad) return toast("La especialidad es obligatoria", "error");

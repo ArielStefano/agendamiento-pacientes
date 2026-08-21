@@ -143,9 +143,10 @@
         </div>
       </div>
       <div class="field">
-        <label for="m-lugares">Lugares de atención</label>
-        <input id="m-lugares" placeholder="Ej: Consultorio 1, Consultorio 2, Domicilio" title="Nombres separados por coma. Ej: Consultorio 1, Domicilio" />
-        <span class="small muted">Nombres separados por coma (ej: Consultorio 1, Domicilio)</span>
+        <label>Lugares de atención</label>
+        <div id="m-lugares-list"></div>
+        <button type="button" class="btn btn-sm btn-secondary" id="btn-add-lugar" onclick="agregarLugar()" style="margin-top:6px;">+ Agregar lugar</button>
+        <span class="small muted">Máximo 5 lugares (ej: Consultorio 1, Domicilio)</span>
       </div>
       <div class="field">
         <label>Días de atención *</label>
