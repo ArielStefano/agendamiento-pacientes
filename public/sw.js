@@ -1,6 +1,5 @@
-// Service Worker: cache de la app para que sea instalable y funcione sin red
-// Cambiar CACHE solo en releases que rompan compatibilidad con caché antigua.
-const CACHE = "cliniagenda-pwa-v1";
+// Service Worker: cache + push notifications
+const CACHE = "cliniagenda-pwa-v2";
 const BASE = self.registration.scope;
 
 const STATIC = [
@@ -84,6 +83,38 @@ self.addEventListener("fetch", (event) => {
         return res;
       });
       return cached || red;
+    })
+  );
+});
+
+// Push notifications
+self.addEventListener("push", (event) => {
+  let data = { title: "CliniAgenda", body: "Tiene una nueva notificación", url: "./dashboard.html" };
+  try {
+    if (event.data) data = { ...data, ...event.data.json() };
+  } catch (e) { /* use defaults */ }
+
+  const options = {
+    body: data.body,
+    icon: "icons/icon-192.png",
+    badge: "icons/icon-192.png",
+    vibrate: [200, 100, 200],
+    data: { url: data.url || "./dashboard.html" },
+    tag: data.tag || "cliniagenda",
+  };
+
+  event.waitUntil(self.registration.showNotification(data.title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "./dashboard.html";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      for (const c of clients) {
+        if (c.url.includes(BASE) && "focus" in c) return c.focus();
+      }
+      return self.clients.openWindow(url);
     })
   );
 });

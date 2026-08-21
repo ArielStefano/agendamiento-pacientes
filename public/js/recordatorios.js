@@ -70,7 +70,8 @@ function renderTabla() {
       const dest = r.dirigido_a ? (mapaUsuarios[r.dirigido_a] || "Usuario específico") : "Todos";
       const acciones =
         r.estado === "pendiente"
-          ? `<button class="btn btn-sm btn-secondary" onclick="marcarEnviado('${r.id}')">Marcar enviado</button>`
+          ? `<button class="btn btn-sm btn-secondary" onclick="marcarEnviado('${r.id}')">Marcar enviado</button>
+             <button class="btn btn-sm btn-secondary" onclick="enviarPushRecordatorio('${r.id}')">Push</button>`
           : "";
       return `
       <tr>
@@ -119,6 +120,28 @@ async function marcarEnviado(id) {
   if (error) return toast(error.message, "error");
   toast("Recordatorio marcado como enviado", "success");
   cargarRecordatorios();
+}
+
+async function enviarPushRecordatorio(id) {
+  const rec = listaRecordatorios.find((r) => r.id === id);
+  if (!rec) return;
+  const c = rec.citas || {};
+  const nombrePaciente = c.pacientes ? c.pacientes.nombre : "";
+  const nombreMedico = c.medicos ? c.medicos.nombre : "";
+  const fecha = c.fecha ? app.formatFechaLarga(c.fecha) : "";
+  const hora = c.hora ? app.hhmm(c.hora) : "";
+  const titulo = "Recordatorio de cita";
+  const mensaje = `${nombrePaciente} — ${fecha} ${hora} con ${nombreMedico}`;
+  const url = "./citas.html";
+
+  const { error } = await supabase.from("push_cola").insert({
+    user_id: rec.dirigido_a || null,
+    titulo,
+    mensaje,
+    url,
+  });
+  if (error) return toast(error.message, "error");
+  toast("Push encolado — ejecute: node scripts/enviar-push.mjs --cola", "success");
 }
 
 function esc(str) {

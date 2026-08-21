@@ -35,6 +35,9 @@ function setupLayout(title) {
               <button onclick="app.markAllRead()">Marcar leídas</button>
             </div>
             <div id="notif-list"></div>
+            <div class="push-actions">
+              <button id="btn-push-toggle" class="btn btn-sm btn-secondary">Activar notificaciones</button>
+            </div>
           </div>
         </div>
         <span id="top-user" class="muted small"></span>

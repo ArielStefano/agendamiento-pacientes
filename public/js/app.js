@@ -52,6 +52,7 @@ const app = {
     this.loadConfig();
     this.setupFAB();
     this.setupPullToRefresh();
+    this.setupPushSubscription();
   },
 
   async loadConfig() {
@@ -266,6 +267,94 @@ const app = {
       }
       pulling = false;
     }, { passive: true });
+  },
+
+  // ── Push notifications ───────────────────────────────────────
+  async setupPushSubscription() {
+    const btn = document.getElementById("btn-push-toggle");
+    if (!btn) return;
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      btn.textContent = "No soportado";
+      btn.disabled = true;
+      return;
+    }
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      this.updatePushButton(sub);
+      btn.addEventListener("click", () => this.togglePush());
+    } catch (e) {
+      btn.textContent = "Error";
+      btn.disabled = true;
+    }
+  },
+
+  async togglePush() {
+    const btn = document.getElementById("btn-push-toggle");
+    if (btn) btn.disabled = true;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        await this.unsubscribePush(sub);
+      } else {
+        await this.subscribePush(reg);
+      }
+    } catch (e) {
+      toast("Error al configurar notificaciones", "error");
+    }
+    if (btn) btn.disabled = false;
+  },
+
+  async subscribePush(reg) {
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") {
+      toast("Permiso de notificaciones denegado", "warning");
+      this.updatePushButton(null);
+      return;
+    }
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: this.urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
+    const p = sub.toJSON();
+    const { error } = await supabase.rpc("registrar_push_suscripcion", {
+      p_endpoint: p.endpoint,
+      p_p256dh: p.keys.p256dh,
+      p_auth: p.keys.auth,
+    });
+    if (error) throw error;
+    this.updatePushButton(sub);
+    toast("Notificaciones push activadas", "success");
+  },
+
+  async unsubscribePush(sub) {
+    const endpoint = sub.endpoint;
+    await sub.unsubscribe();
+    await supabase.rpc("eliminar_push_suscripcion", { p_endpoint: endpoint });
+    this.updatePushButton(null);
+    toast("Notificaciones push desactivadas", "info");
+  },
+
+  updatePushButton(sub) {
+    const btn = document.getElementById("btn-push-toggle");
+    if (!btn) return;
+    if (sub) {
+      btn.textContent = "Desactivar notificaciones";
+      btn.classList.add("active");
+    } else {
+      btn.textContent = "Activar notificaciones";
+      btn.classList.remove("active");
+    }
+  },
+
+  urlBase64ToUint8Array(base64String) {
+    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const raw = atob(base64);
+    const arr = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+    return arr;
   },
 
   formatDate(value) {
