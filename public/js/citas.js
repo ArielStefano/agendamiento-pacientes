@@ -247,7 +247,10 @@ function calcularSlots(medico, fecha, citas) {
 
   // Rango de descanso
   let descansoIni = null, descansoFin = null;
-  if (medico.hora_inicio_descanso && medico.hora_fin_descanso) {
+  if (diaSemana === "Sabado" && medico.hora_inicio_descanso_sabado && medico.hora_fin_descanso_sabado) {
+    descansoIni = toMin(medico.hora_inicio_descanso_sabado);
+    descansoFin = toMin(medico.hora_fin_descanso_sabado);
+  } else if (medico.hora_inicio_descanso && medico.hora_fin_descanso) {
     descansoIni = toMin(medico.hora_inicio_descanso);
     descansoFin = toMin(medico.hora_fin_descanso);
   }

@@ -35,7 +35,10 @@ function fmtAgenda(m) {
   const descanso = m.hora_inicio_descanso && m.hora_fin_descanso
     ? ` · Descanso: ${fmtHorario(m.hora_inicio_descanso, m.hora_fin_descanso)}`
     : "";
-  return `${esc(dias.join(", "))}<br>${principal}${sabado} · ${m.duracion_cita_min} min${buffer}${descanso}`;
+  const descansoSab = m.hora_inicio_descanso_sabado && m.hora_fin_descanso_sabado
+    ? ` · Desc. sáb: ${fmtHorario(m.hora_inicio_descanso_sabado, m.hora_fin_descanso_sabado)}`
+    : "";
+  return `${esc(dias.join(", "))}<br>${principal}${sabado} · ${m.duracion_cita_min} min${buffer}${descanso}${descansoSab}`;
 }
 
 function renderTabla() {
@@ -130,6 +133,9 @@ function abrirModalMedico(medico = null) {
   document.getElementById("m-descanso-inicio").value = medico && medico.hora_inicio_descanso ? app.hhmm(medico.hora_inicio_descanso) : "";
   document.getElementById("m-descanso-fin").value = medico && medico.hora_fin_descanso ? app.hhmm(medico.hora_fin_descanso) : "";
 
+  document.getElementById("m-descanso-sabado-inicio").value = medico && medico.hora_inicio_descanso_sabado ? app.hhmm(medico.hora_inicio_descanso_sabado) : "";
+  document.getElementById("m-descanso-sabado-fin").value = medico && medico.hora_fin_descanso_sabado ? app.hhmm(medico.hora_fin_descanso_sabado) : "";
+
   document.getElementById("modal").classList.add("open");
 }
 
@@ -182,6 +188,8 @@ async function guardarMedico() {
 
   const descansoInicio = document.getElementById("m-descanso-inicio").value || null;
   const descansoFin = document.getElementById("m-descanso-fin").value || null;
+  const descansoSabInicio = document.getElementById("m-descanso-sabado-inicio").value || null;
+  const descansoSabFin = document.getElementById("m-descanso-sabado-fin").value || null;
 
   if (!nombre) return toast("El nombre es obligatorio", "error");
   if (!especialidad) return toast("La especialidad es obligatoria", "error");
@@ -209,6 +217,8 @@ async function guardarMedico() {
       p_buffer_domicilio_min: buffer,
       p_hora_inicio_descanso: descansoInicio ? descansoInicio + ":00" : null,
       p_hora_fin_descanso: descansoFin ? descansoFin + ":00" : null,
+      p_hora_inicio_descanso_sabado: descansoSabInicio ? descansoSabInicio + ":00" : null,
+      p_hora_fin_descanso_sabado: descansoSabFin ? descansoSabFin + ":00" : null,
     };
     if (pass) params.p_contrasena = pass;
     ({ data: datos, error } = await supabase.rpc("actualizar_medico_admin", params));
@@ -230,6 +240,8 @@ async function guardarMedico() {
       p_buffer_domicilio_min: buffer,
       p_hora_inicio_descanso: descansoInicio ? descansoInicio + ":00" : null,
       p_hora_fin_descanso: descansoFin ? descansoFin + ":00" : null,
+      p_hora_inicio_descanso_sabado: descansoSabInicio ? descansoSabInicio + ":00" : null,
+      p_hora_fin_descanso_sabado: descansoSabFin ? descansoSabFin + ":00" : null,
     }));
     if (!error) {
       toast("Médico creado correctamente", "success");

@@ -101,14 +101,27 @@ function renderCalendario(medico, citas) {
   const dur = medico.duracion_cita_min || 30;
   const bufferDom = medico.buffer_domicilio_min || 0;
 
-  // Rango de descanso
+  // Rango de descanso (lunes-viernes)
   let descansoIni = null, descansoFin = null;
   if (medico.hora_inicio_descanso && medico.hora_fin_descanso) {
     descansoIni = toMin(medico.hora_inicio_descanso);
     descansoFin = toMin(medico.hora_fin_descanso);
   }
 
-  function enDescanso(hora) {
+  // Rango de descanso sábado
+  let descansoSabIni = null, descansoSabFin = null;
+  if (medico.hora_inicio_descanso_sabado && medico.hora_fin_descanso_sabado) {
+    descansoSabIni = toMin(medico.hora_inicio_descanso_sabado);
+    descansoSabFin = toMin(medico.hora_fin_descanso_sabado);
+  }
+
+  function enDescanso(hora, fecha) {
+    const esSabado = fecha && DIAS[fechas.indexOf(fecha)] === "Sabado";
+    if (esSabado) {
+      if (descansoSabIni === null) return false;
+      const hm = toMin(hora);
+      return hm >= descansoSabIni && hm < descansoSabFin;
+    }
     if (descansoIni === null) return false;
     const hm = toMin(hora);
     return hm >= descansoIni && hm < descansoFin;
@@ -187,7 +200,7 @@ function renderCalendario(medico, citas) {
       if (!cellHtml && !esLaboral) {
         html += `<div class="cal-cell cal-cell-empty"></div>`;
       } else if (!cellHtml && esLaboral && esFuturo && app.user && app.user.rol === "paciente") {
-        if (enDescanso(hora)) {
+        if (enDescanso(hora, fecha)) {
           html += `<div class="cal-cell cal-cell-descanso" title="Horario de descanso"></div>`;
         } else if (esSlotBloqueado(fecha, hora)) {
           html += `<div class="cal-cell cal-cell-buffer" title="En ruta (traslado)"></div>`;
