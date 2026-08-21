@@ -76,7 +76,7 @@ async function main() {
   const medicoId = "7fa57aec-8e39-4fe0-b2bb-bebd72d0d251";
   const citaSab = await rpc("crear_cita", {
     p_paciente: pacienteId, p_medico: medicoId, p_fecha: sabado,
-    p_hora: "10:00:00", p_motivo: "Test sábado", p_lugar: "consultorio",
+    p_hora: "10:00:00", p_motivo: "Test sábado", p_lugar: "Consultorio",
   }, token);
   check("cita sabado 10:00 OK", citaSab.ok, `id=${citaSab.data?.id}`);
 

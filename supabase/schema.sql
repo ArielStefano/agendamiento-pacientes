@@ -24,7 +24,8 @@ create table if not exists public.medicos (
   hora_inicio_descanso time,
   hora_fin_descanso time,
   hora_inicio_descanso_sabado time,
-  hora_fin_descanso_sabado time
+  hora_fin_descanso_sabado time,
+  lugares_atencion jsonb not null default '["Consultorio"]'
 );
 
 create table if not exists public.perfiles (
@@ -60,8 +61,7 @@ create table if not exists public.citas (
   hora time not null,
   duracion_min int not null default 30,
   motivo text,
-  lugar text not null default 'consultorio'
-    check (lugar in ('consultorio', 'domicilio')),
+  lugar text not null default 'Consultorio',
   estado      text not null default 'programada'
                 check (estado in ('solicitada', 'programada', 'confirmada', 'completada', 'cancelada')),
   creada_por uuid references auth.users (id),
@@ -317,15 +317,19 @@ begin
     v_estado := 'programada';
   end if;
 
-  if p_lugar is null then p_lugar := 'consultorio'; end if;
-  if p_lugar not in ('consultorio', 'domicilio') then
-    raise exception 'Lugar inválido (debe ser consultorio o domicilio)';
-  end if;
+  if p_lugar is null then p_lugar := 'Consultorio'; end if;
 
   select * into v_medico from public.medicos where id = p_medico for update;
   if not found then
     raise exception 'Médico no encontrado';
   end if;
+
+  if not exists (SELECT 1 FROM jsonb_array_elements_text(v_medico.lugares_atencion) l WHERE lower(l) = lower(p_lugar)) then
+    raise exception 'Lugar no válido para este médico. Opciones: %', array_to_string(array(SELECT jsonb_array_elements_text(v_medico.lugares_atencion)), ', ');
+  end if;
+
+  -- Normalize to title case from medico config
+  SELECT l INTO p_lugar FROM jsonb_array_elements_text(v_medico.lugares_atencion) l WHERE lower(l) = lower(p_lugar);
 
   if p_fecha < current_date then
     raise exception 'No se pueden agendar citas en el pasado';
@@ -406,10 +410,7 @@ begin
     raise exception 'Sin permisos para reprogramar citas';
   end if;
 
-  if p_lugar is null then p_lugar := 'consultorio'; end if;
-  if p_lugar not in ('consultorio', 'domicilio') then
-    raise exception 'Lugar inválido (debe ser consultorio o domicilio)';
-  end if;
+  if p_lugar is null then p_lugar := 'Consultorio'; end if;
 
   select * into v_cita_actual from public.citas where id = p_id;
   if not found then
@@ -420,6 +421,13 @@ begin
   if not found then
     raise exception 'Médico no encontrado';
   end if;
+
+  if not exists (SELECT 1 FROM jsonb_array_elements_text(v_medico.lugares_atencion) l WHERE lower(l) = lower(p_lugar)) then
+    raise exception 'Lugar no válido para este médico. Opciones: %', array_to_string(array(SELECT jsonb_array_elements_text(v_medico.lugares_atencion)), ', ');
+  end if;
+
+  -- Normalize to title case from medico config
+  SELECT l INTO p_lugar FROM jsonb_array_elements_text(v_medico.lugares_atencion) l WHERE lower(l) = lower(p_lugar);
 
   if p_fecha < current_date then
     raise exception 'No se pueden agendar citas en el pasado';
@@ -587,7 +595,8 @@ create or replace function public.crear_medico_admin(
   p_hora_inicio_descanso time default null,
   p_hora_fin_descanso time default null,
   p_hora_inicio_descanso_sabado time default null,
-  p_hora_fin_descanso_sabado time default null
+  p_hora_fin_descanso_sabado time default null,
+  p_lugares_atencion jsonb default null
 )
 returns jsonb
 language plpgsql security definer set search_path = public
@@ -650,6 +659,10 @@ begin
     raise exception 'Ya existe un médico con ese email';
   end if;
 
+  if p_lugares_atencion is null or jsonb_array_length(p_lugares_atencion) = 0 then
+    p_lugares_atencion := '["Consultorio"]'::jsonb;
+  end if;
+
   insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
     raw_app_meta_data, raw_user_meta_data, confirmation_token, recovery_token, email_change_token_new,
     email_change, is_sso_user, is_anonymous, created_at, updated_at)
@@ -665,11 +678,11 @@ begin
   insert into public.medicos (nombre, especialidad, telefono, email, dias_atencion,
     hora_inicio, hora_fin, duracion_cita_min, hora_inicio_sabado, hora_fin_sabado,
     buffer_domicilio_min, hora_inicio_descanso, hora_fin_descanso,
-    hora_inicio_descanso_sabado, hora_fin_descanso_sabado)
+    hora_inicio_descanso_sabado, hora_fin_descanso_sabado, lugares_atencion)
   values (trim(p_nombre), trim(p_especialidad), p_telefono, v_email, p_dias,
     p_hora_inicio, p_hora_fin, p_duracion, p_hora_inicio_sabado, p_hora_fin_sabado,
     coalesce(p_buffer_domicilio_min, 30), p_hora_inicio_descanso, p_hora_fin_descanso,
-    p_hora_inicio_descanso_sabado, p_hora_fin_descanso_sabado)
+    p_hora_inicio_descanso_sabado, p_hora_fin_descanso_sabado, p_lugares_atencion)
   returning id into v_medico_id;
 
   insert into public.perfiles (user_id, nombre, rol, medico_id)
@@ -679,8 +692,8 @@ begin
 end;
 $$;
 
-grant execute on function public.crear_medico_admin(text, text, text, text, jsonb, time, time, int, text, time, time, int, time, time, time, time) to authenticated;
-revoke all on function public.crear_medico_admin(text, text, text, text, jsonb, time, time, int, text, time, time, int, time, time, time, time) from public;
+grant execute on function public.crear_medico_admin(text, text, text, text, jsonb, time, time, int, text, time, time, int, time, time, time, time, jsonb) to authenticated;
+revoke all on function public.crear_medico_admin(text, text, text, text, jsonb, time, time, int, text, time, time, int, time, time, time, time, jsonb) from public;
 
 -- Edita médico (puede cambiar email y contraseña de acceso)
 create or replace function public.actualizar_medico_admin(
@@ -700,7 +713,8 @@ create or replace function public.actualizar_medico_admin(
   p_hora_inicio_descanso time default null,
   p_hora_fin_descanso time default null,
   p_hora_inicio_descanso_sabado time default null,
-  p_hora_fin_descanso_sabado time default null
+  p_hora_fin_descanso_sabado time default null,
+  p_lugares_atencion jsonb default null
 )
 returns jsonb
 language plpgsql security definer set search_path = public
@@ -782,6 +796,10 @@ begin
     where id = v_user_id;
   end if;
 
+  if p_lugares_atencion is null or jsonb_array_length(p_lugares_atencion) = 0 then
+    p_lugares_atencion := '["Consultorio"]'::jsonb;
+  end if;
+
   update public.medicos
   set nombre = trim(p_nombre), especialidad = trim(p_especialidad), telefono = p_telefono,
       email = v_email, dias_atencion = p_dias, hora_inicio = p_hora_inicio, hora_fin = p_hora_fin,
@@ -789,7 +807,8 @@ begin
       hora_inicio_sabado = p_hora_inicio_sabado, hora_fin_sabado = p_hora_fin_sabado,
       buffer_domicilio_min = coalesce(p_buffer_domicilio_min, 30),
       hora_inicio_descanso = p_hora_inicio_descanso, hora_fin_descanso = p_hora_fin_descanso,
-      hora_inicio_descanso_sabado = p_hora_inicio_descanso_sabado, hora_fin_descanso_sabado = p_hora_fin_descanso_sabado
+      hora_inicio_descanso_sabado = p_hora_inicio_descanso_sabado, hora_fin_descanso_sabado = p_hora_fin_descanso_sabado,
+      lugares_atencion = p_lugares_atencion
   where id = p_id;
 
   update public.perfiles set nombre = trim(p_nombre) where medico_id = p_id;

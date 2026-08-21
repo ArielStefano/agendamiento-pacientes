@@ -131,7 +131,7 @@ function renderCalendario(medico, citas) {
   const bloqueadosPorBuffer = {};
   if (bufferDom > 0) {
     for (const c of citas) {
-      if (c.lugar === "domicilio" && c.estado === "completada") {
+      if (c.lugar.toLowerCase() === "domicilio" && c.estado === "completada") {
         const finCita = toMin(c.hora) + c.duracion_min;
         const finBuf = finCita + bufferDom;
         if (!bloqueadosPorBuffer[c.fecha]) bloqueadosPorBuffer[c.fecha] = [];
@@ -195,7 +195,7 @@ function renderCalendario(medico, citas) {
         const esMiCita = debeAnonimizar && c.pacientes && c.pacientes.id === app.user.paciente_id;
         const nombrePaciente = debeAnonimizar && !esMiCita ? "Reservado" : esc((c.pacientes && c.pacientes.nombre) || "");
         const motivoPaciente = debeAnonimizar && !esMiCita ? "" : esc(c.motivo || "");
-        cellHtml += `<div class="cal-event ${c.estado}" onclick='verDetalle(${JSON.stringify(c).replace(/'/g, "\\u0027")})' title="${nombrePaciente}${motivoPaciente ? " — " + motivoPaciente : ""}">${app.hhmm(c.hora)} · ${c.lugar === "domicilio" ? "🏠" : "🏥"} ${nombrePaciente}</div>`;
+        cellHtml += `<div class="cal-event ${c.estado}" onclick='verDetalle(${JSON.stringify(c).replace(/'/g, "\\u0027")})' title="${nombrePaciente}${motivoPaciente ? " — " + motivoPaciente : ""}">${app.hhmm(c.hora)} · ${c.lugar.toLowerCase() === "domicilio" ? "🏠" : "🏥"} ${nombrePaciente}</div>`;
       }
       if (!cellHtml && !esLaboral) {
         html += `<div class="cal-cell cal-cell-empty"></div>`;
@@ -239,7 +239,7 @@ function verDetalle(cita) {
       <div class="field"><label>Teléfono</label><div>${telefono}</div></div>
       <div class="field"><label>Fecha</label><div>${app.formatFechaLarga(cita.fecha)}</div></div>
       <div class="field"><label>Hora</label><div>${app.hhmm(cita.hora)}</div></div>
-      <div class="field"><label>Lugar</label><div>${cita.lugar === "domicilio" ? "🏠 A domicilio" : "🏥 En consultorio"}</div></div>
+      <div class="field"><label>Lugar</label><div>${cita.lugar.toLowerCase() === "domicilio" ? "🏠 A domicilio" : "🏥 " + esc(cita.lugar)}</div></div>
       <div class="field"><label>Motivo</label><div>${esc(cita.motivo || "-")}</div></div>
       <div class="field"><label>Estado</label><div><span class="badge ${cita.estado}">${cita.estado}</span></div></div>
     </div>
@@ -339,12 +339,20 @@ function abrirAgendar(fecha, hora) {
 
   slotSeleccionado = { medico_id: medico.id, fecha, hora, medico_nombre: medico.nombre, medico_esp: medico.especialidad };
 
+  const lugares = medico.lugares_atencion && medico.lugares_atencion.length
+    ? medico.lugares_atencion
+    : ["Consultorio"];
+  const lugarOpts = lugares.map((l) => `<option value="${esc(l)}">${esc(l)}</option>`).join("");
+
   document.getElementById("agendar-info").innerHTML = `
     <div class="grid grid-2">
       <div class="field"><label>Médico</label><div><strong>${esc(medico.nombre)}</strong> — ${esc(medico.especialidad)}</div></div>
       <div class="field"><label>Fecha</label><div>${app.formatFechaLarga(fecha)}</div></div>
       <div class="field"><label>Hora</label><div>${hora}</div></div>
-      <div class="field"><label>Lugar</label><div>🏥 Consultorio</div></div>
+      <div class="field">
+        <label for="ag-lugar">Lugar</label>
+        <select id="ag-lugar">${lugarOpts}</select>
+      </div>
     </div>
   `;
   document.getElementById("ag-motivo").value = "";
@@ -369,7 +377,7 @@ async function confirmarAgendar() {
       p_fecha: slotSeleccionado.fecha,
       p_hora: slotSeleccionado.hora + ":00",
       p_motivo: document.getElementById("ag-motivo").value || null,
-      p_lugar: "consultorio",
+      p_lugar: document.getElementById("ag-lugar").value || "Consultorio",
     });
     if (error) throw new Error(error.message);
     cerrarAgendar();

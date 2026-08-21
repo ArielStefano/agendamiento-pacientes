@@ -13,7 +13,7 @@ const ESTADO_NEXT = {
 };
 
 async function initCitas() {
-  const medicos = await supabase.from("medicos").select("id, nombre, especialidad").order("nombre");
+  const medicos = await supabase.from("medicos").select("id, nombre, especialidad, lugares_atencion").order("nombre");
   if (medicos.error) return toast(medicos.error.message, "error");
   listaMedicos = medicos.data || [];
 
@@ -126,7 +126,7 @@ function renderTabla() {
         <td><strong>${app.hhmm(c.hora)}</strong></td>
         <td>${esc((c.pacientes && c.pacientes.nombre) || "")}</td>
         <td>${esc((c.medicos && c.medicos.nombre) || "")} <span class="muted small">(${esc((c.medicos && c.medicos.especialidad) || "")})</span></td>
-        <td>${c.lugar === "domicilio" ? "🏠 Domicilio" : "🏥 Consultorio"}</td>
+        <td>${c.lugar.toLowerCase() === "domicilio" ? "🏠 Domicilio" : "🏥 " + esc(c.lugar)}</td>
         <td>${esc(c.motivo || "-")}</td>
         <td><span class="badge ${c.estado}">${c.estado === "cancelada_clausula" ? "Cláusula" : c.estado}</span>${c.motivo_cancelacion ? `<br><span class="muted small" title="${esc(c.motivo_cancelacion)}">${esc(c.motivo_cancelacion.length > 40 ? c.motivo_cancelacion.slice(0, 40) + "..." : c.motivo_cancelacion)}</span>` : ""}</td>
         <td>
@@ -153,13 +153,13 @@ async function abrirModalCita(cita = null) {
   document.getElementById("cita-titulo").textContent = cita ? "Editar cita" : "Nueva cita";
   document.getElementById("c-id").value = cita ? cita.id : "";
   document.getElementById("c-motivo").value = cita ? cita.motivo || "" : "";
-  document.getElementById("c-lugar").value = cita ? cita.lugar || "consultorio" : "consultorio";
   slotSeleccionado = null;
 
   if (cita) {
     document.getElementById("c-paciente").value = cita.pacientes ? cita.pacientes.id : "";
     document.getElementById("c-medico").value = cita.medicos ? cita.medicos.id : "";
     document.getElementById("c-fecha").value = cita.fecha;
+    actualizarLugares(cita.medicos ? cita.medicos.id : "", cita.lugar || "Consultorio");
     await cargarDisponibilidad();
     const slot = document.querySelector(`.slot[data-hora="${app.hhmm(cita.hora)}"]`);
     if (slot) {
@@ -170,9 +170,10 @@ async function abrirModalCita(cita = null) {
     }
   } else {
     document.getElementById("c-paciente").value = "";
-    document.getElementById("c-medico").value =
-      app.isMedico && app.user.medico_id ? app.user.medico_id : listaMedicos[0] ? listaMedicos[0].id : "";
+    const medicoDefault = app.isMedico && app.user.medico_id ? app.user.medico_id : listaMedicos[0] ? listaMedicos[0].id : "";
+    document.getElementById("c-medico").value = medicoDefault;
     document.getElementById("c-fecha").value = app.hoyISO();
+    actualizarLugares(medicoDefault, "Consultorio");
     cargarDisponibilidad();
   }
 
@@ -181,6 +182,16 @@ async function abrirModalCita(cita = null) {
 
 function cerrarModalCita() {
   document.getElementById("modal-cita").classList.remove("open");
+}
+
+function actualizarLugares(medicoId, seleccionar) {
+  const medico = listaMedicos.find((m) => m.id === medicoId);
+  const sel = document.getElementById("c-lugar");
+  const lugares = medico && medico.lugares_atencion && medico.lugares_atencion.length
+    ? medico.lugares_atencion
+    : ["Consultorio"];
+  sel.innerHTML = lugares.map((l) => `<option value="${esc(l)}">${esc(l)}</option>`).join("");
+  if (seleccionar && lugares.includes(seleccionar)) sel.value = seleccionar;
 }
 
 function toMin(t) {
@@ -270,7 +281,7 @@ function calcularSlots(medico, fecha, citas) {
     // Buffer domicilio: bloquear slot si una cita domicilio termina dentro del buffer antes de este slot
     if (bufferDom > 0) {
       const bloqueado = ocupados.some((o) =>
-        o.l === "domicilio" && o.e === "completada" && o.f > t - bufferDom && o.f <= t
+        o.l.toLowerCase() === "domicilio" && o.e === "completada" && o.f > t - bufferDom && o.f <= t
       );
       if (bloqueado) continue;
     }
@@ -292,7 +303,7 @@ async function guardarCita() {
   const paciente = document.getElementById("c-paciente").value;
   const medico = document.getElementById("c-medico").value;
   const motivo = document.getElementById("c-motivo").value || null;
-  const lugar = document.getElementById("c-lugar").value || "consultorio";
+  const lugar = document.getElementById("c-lugar").value || "Consultorio";
 
   if (!paciente) return toast("Seleccione un paciente", "error");
   if (!medico) return toast("Seleccione un médico", "error");

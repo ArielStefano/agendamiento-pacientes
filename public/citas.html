@@ -79,7 +79,7 @@
         </div>
         <div class="field">
           <label for="c-medico">Médico *</label>
-          <select id="c-medico" onchange="cargarDisponibilidad()"></select>
+          <select id="c-medico" onchange="cargarDisponibilidad(); actualizarLugares(this.value);"></select>
         </div>
         <div class="field">
           <label for="c-fecha">Fecha *</label>
@@ -91,10 +91,7 @@
         </div>
         <div class="field">
           <label for="c-lugar">Lugar *</label>
-          <select id="c-lugar">
-            <option value="consultorio">En consultorio</option>
-            <option value="domicilio">A domicilio</option>
-          </select>
+          <select id="c-lugar"></select>
         </div>
       </div>
       <div class="field">

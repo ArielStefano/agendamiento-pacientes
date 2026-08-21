@@ -186,7 +186,7 @@ const citaId = extractId(crearCita.data) || crearCita.data;
 const vCita = await get("citas", "select=*,pacientes(nombre),medicos(nombre)&id=eq." + citaId, adminToken);
 assert("cita paciente correcto", vCita.ok && vCita.data[0]?.pacientes?.nombre === "Paciente Test V2");
 assert("cita medico correcto", vCita.data[0]?.medicos?.nombre === "Josselyn Toaquiza");
-assert("cita lugar=consultorio", vCita.data[0]?.lugar === "consultorio");
+assert("cita lugar=consultorio", vCita.data[0]?.lugar === "Consultorio");
 
 // ═══════════════════════════════════════════
 // 7. CAMBIAR ESTADOS
@@ -211,7 +211,7 @@ const crearDom = await rpc("crear_cita", {
 assert("crear cita domicilio", crearDom.ok, JSON.stringify(crearDom.data));
 const citaDomId = extractId(crearDom.data) || crearDom.data;
 const vDom = await get("citas", "select=lugar&id=eq." + citaDomId, adminToken);
-assert("lugar=domicilio", vDom.ok && vDom.data[0]?.lugar === "domicilio");
+assert("lugar=domicilio", vDom.ok && vDom.data[0]?.lugar === "Domicilio");
 
 // ═══════════════════════════════════════════
 // 9. CITA SÁBADO
