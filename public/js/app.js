@@ -399,6 +399,16 @@ async function queuePush(user_id, titulo, mensaje, url) {
 
 async function processPushCola() {
   try {
+    // Try calling Edge Function for real push (works even when page is closed)
+    try {
+      await fetch(`${SUPABASE_URL}/functions/v1/enviar-push`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_ANON_KEY}` },
+        body: "{}",
+      });
+    } catch (e) { /* Edge Function not available, fall back to local */ }
+
+    // Also show local notifications for immediate feedback
     const { data: jobs } = await supabase
       .from("push_cola").select("id, user_id, titulo, mensaje, url")
       .eq("estado", "pendiente").order("created_at").limit(10);
