@@ -319,12 +319,17 @@ const app = {
       applicationServerKey: this.urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
     });
     const p = sub.toJSON();
-    const { error } = await supabase.rpc("registrar_push_suscripcion", {
+    const { data, error } = await supabase.rpc("registrar_push_suscripcion", {
       p_endpoint: p.endpoint,
       p_p256dh: p.keys.p256dh,
       p_auth: p.keys.auth,
     });
-    if (error) throw error;
+    if (error) {
+      console.error("[Push] RPC error:", error);
+      toast("Error guardando suscripción: " + error.message, "error");
+      throw error;
+    }
+    console.log("[Push] Suscripción guardada:", data);
     this.updatePushButton(sub);
     toast("Notificaciones push activadas", "success");
   },
