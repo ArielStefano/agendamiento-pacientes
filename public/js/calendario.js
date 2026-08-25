@@ -421,6 +421,15 @@ async function confirmarAgendar() {
     if (error) throw new Error(error.message);
     cerrarAgendar();
     toast("Cita solicitada correctamente. Pendiente de aprobación.", "success");
+    // Push: notificar a admin y al médico
+    const { data: adminUsers } = await supabase.from("perfiles").select("user_id").in("rol", ["admin", "recepcion"]);
+    const nombrePaciente = app.user ? app.user.nombre : "Un paciente";
+    const fecha = slotSeleccionado.fecha;
+    const hora = app.hhmm(slotSeleccionado.hora);
+    for (const u of (adminUsers || [])) {
+      queuePush(u.user_id, "Nueva cita solicitada", `${nombrePaciente} — ${fecha} ${hora}`, "./citas.html");
+    }
+    queuePush(null, "Nueva cita solicitada", `${nombrePaciente} — ${fecha} ${hora}`, "./citas.html");
     cargarSemana();
   } catch (err) {
     toast(err.message, "error");

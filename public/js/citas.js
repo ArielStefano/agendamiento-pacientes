@@ -369,6 +369,9 @@ async function guardarCita() {
     });
     error = e;
     if (!error) toast("Cita creada correctamente", "success");
+    if (!error) {
+      queuePush(paciente, "Nueva cita asignada", `Cita: ${fecha} a las ${app.hhmm(hora)}`, "./calendario.html");
+    }
   }
 
   if (error) return toast(error.message, "error");
@@ -386,9 +389,16 @@ async function cambiarEstado(id, estado) {
     abrirModalCancelar(id);
     return;
   }
+  const c = listaCitas.find((x) => x.id === id);
   const { error } = await supabase.rpc("cambiar_estado_cita", { p_id: id, p_estado: estado });
   if (error) return toast(error.message, "error");
   toast(`Cita marcada como ${estado}`, "success");
+  // Push: notificar al paciente cuando se aprueba
+  if (estado === "confirmada" && c && c.pacientes && c.pacientes.id) {
+    const fecha = c.fecha || "";
+    const hora = app.hhmm(c.hora || "");
+    queuePush(c.pacientes.id, "Cita aprobada", `Su cita del ${fecha} a las ${hora} fue aprobada.`, "./calendario.html");
+  }
   aplicarFiltros();
 }
 

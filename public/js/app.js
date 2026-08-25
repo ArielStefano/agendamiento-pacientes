@@ -53,6 +53,7 @@ const app = {
     this.setupFAB();
     this.setupPullToRefresh();
     this.setupPushSubscription();
+    setTimeout(() => processPushCola(), 2000);
   },
 
   async loadConfig() {
@@ -388,6 +389,37 @@ function esc(str) {
   const div = document.createElement("div");
   div.textContent = str == null ? "" : str;
   return div.innerHTML;
+}
+
+async function queuePush(user_id, titulo, mensaje, url) {
+  try {
+    await supabase.from("push_cola").insert({ user_id, titulo, mensaje, url: url || "./dashboard.html" });
+  } catch (e) { /* silencioso */ }
+}
+
+async function processPushCola() {
+  try {
+    const { data: jobs } = await supabase
+      .from("push_cola").select("id, user_id, titulo, mensaje, url")
+      .eq("estado", "pendiente").order("created_at").limit(10);
+    if (!jobs || !jobs.length) return;
+    const reg = await navigator.serviceWorker.ready;
+    for (const job of jobs) {
+      try {
+        await reg.showNotification(job.titulo, {
+          body: job.mensaje,
+          icon: "icons/icon-192.png",
+          badge: "icons/icon-192.png",
+          vibrate: [200, 100, 200],
+          data: { url: job.url || "./dashboard.html" },
+          tag: "cliniagenda-recordatorio",
+        });
+        await supabase.from("push_cola").update({ estado: "enviado", enviado_at: new Date().toISOString() }).eq("id", job.id);
+      } catch (e) {
+        await supabase.from("push_cola").update({ estado: "fallido" }).eq("id", job.id);
+      }
+    }
+  } catch (e) { /* silencioso */ }
 }
 
 function escapeHTML(str) {
