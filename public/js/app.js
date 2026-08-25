@@ -397,6 +397,15 @@ async function queuePush(user_id, titulo, mensaje, url) {
   } catch (e) { /* silencioso */ }
 }
 
+async function notifyAdmins(titulo, mensaje, url) {
+  try {
+    const { data } = await supabase.from("perfiles").select("user_id").in("rol", ["admin", "recepcion"]);
+    for (const u of (data || [])) {
+      await queuePush(u.user_id, titulo, mensaje, url);
+    }
+  } catch (e) { /* silencioso */ }
+}
+
 async function processPushCola() {
   try {
     // Try calling Edge Function for real push (works even when page is closed)

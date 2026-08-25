@@ -371,6 +371,7 @@ async function guardarCita() {
     if (!error) toast("Cita creada correctamente", "success");
     if (!error) {
       queuePush(paciente, "Nueva cita asignada", `Cita: ${fecha} a las ${app.hhmm(hora)}`, "./calendario.html");
+      notifyAdmins("Cita creada", `Paciente: ${paciente} — ${fecha} ${app.hhmm(hora)}`, "./citas.html");
     }
   }
 
@@ -393,11 +394,20 @@ async function cambiarEstado(id, estado) {
   const { error } = await supabase.rpc("cambiar_estado_cita", { p_id: id, p_estado: estado });
   if (error) return toast(error.message, "error");
   toast(`Cita marcada como ${estado}`, "success");
-  // Push: notificar al paciente cuando se aprueba
-  if (estado === "confirmada" && c && c.pacientes && c.pacientes.id) {
+  if (c && c.pacientes && c.pacientes.id) {
     const fecha = c.fecha || "";
     const hora = app.hhmm(c.hora || "");
-    queuePush(c.pacientes.id, "Cita aprobada", `Su cita del ${fecha} a las ${hora} fue aprobada.`, "./calendario.html");
+    const medicoNombre = c.medicos ? c.medicos.nombre : "";
+    if (estado === "confirmada") {
+      queuePush(c.pacientes.id, "Cita aprobada", `Su cita del ${fecha} a las ${hora} fue aprobada.`, "./calendario.html");
+      notifyAdmins("Cita aprobada", `${c.pacientes.nombre} — ${fecha} ${hora} con ${medicoNombre}`, "./citas.html");
+    } else if (estado === "completada") {
+      queuePush(c.pacientes.id, "Cita completada", `Su cita del ${fecha} a las ${hora} fue completada.`, "./calendario.html");
+      notifyAdmins("Cita completada", `${c.pacientes.nombre} — ${fecha} ${hora} con ${medicoNombre}`, "./citas.html");
+    } else if (estado === "cancelada") {
+      queuePush(c.pacientes.id, "Cita cancelada", `Su cita del ${fecha} a las ${hora} fue cancelada.`, "./calendario.html");
+      notifyAdmins("Cita cancelada", `${c.pacientes.nombre} — ${fecha} ${hora} con ${medicoNombre}`, "./citas.html");
+    }
   }
   aplicarFiltros();
 }
@@ -466,6 +476,17 @@ async function confirmarModalCancelar() {
     });
     if (error) throw new Error(error.message);
     toast("Cita cancelada correctamente", "success");
+    const fecha = citaACancelar.fecha || "";
+    const hora = app.hhmm(citaACancelar.hora || "");
+    const medicoNombre = citaACancelar.medicos ? citaACancelar.medicos.nombre : "";
+    const pacienteNombre = citaACancelar.pacientes ? citaACancelar.pacientes.nombre : "";
+    const pacienteId = citaACancelar.pacientes ? citaACancelar.pacientes.id : null;
+    if (app.user && app.user.rol === "paciente") {
+      notifyAdmins("Cita cancelada por paciente", `${pacienteNombre} — ${fecha} ${hora} con ${medicoNombre}`, "./citas.html");
+    } else {
+      if (pacienteId) queuePush(pacienteId, "Cita cancelada", `Su cita del ${fecha} a las ${hora} fue cancelada.`, "./calendario.html");
+      notifyAdmins("Cita cancelada", `${pacienteNombre} — ${fecha} ${hora} con ${medicoNombre}`, "./citas.html");
+    }
     cerrarModalCancelar();
     aplicarFiltros();
   } catch (err) {

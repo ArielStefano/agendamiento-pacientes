@@ -360,6 +360,11 @@ async function confirmarCancelar() {
     });
     if (error) throw new Error(error.message);
     toast("Cita cancelada correctamente", "success");
+    const fecha = citaACancelar.fecha || "";
+    const hora = app.hhmm(citaACancelar.hora || "");
+    const medicoNombre = citaACancelar.medicos ? citaACancelar.medicos.nombre : "";
+    const pacienteNombre = app.user ? app.user.nombre : "";
+    notifyAdmins("Cita cancelada por paciente", `${pacienteNombre} — ${fecha} ${hora} con ${medicoNombre}`, "./citas.html");
     cerrarCancelar();
     cerrarDetalle();
     cargarSemana();
