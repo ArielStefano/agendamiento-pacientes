@@ -1,5 +1,5 @@
 // Service Worker: cache + push notifications
-const CACHE = "cliniagenda-pwa-v2";
+const CACHE = "cliniagenda-pwa-v3";
 const BASE = self.registration.scope;
 
 const STATIC = [
@@ -11,6 +11,9 @@ const STATIC = [
   "pacientes.html",
   "medicos.html",
   "recordatorios.html",
+  "configuracion.html",
+  "forgot-password.html",
+  "reset-password.html",
   "offline.html",
   "css/style.css",
   "js/config.js",
@@ -23,6 +26,8 @@ const STATIC = [
   "js/pacientes.js",
   "js/medicos.js",
   "js/recordatorios.js",
+  "js/configuracion.js",
+  "js/security.js",
   "vendor/supabase.min.js",
   "manifest.webmanifest",
   "icons/icon-180.png",

@@ -88,6 +88,54 @@ create index if not exists idx_citas_medico on public.citas (medico_id);
 create index if not exists idx_citas_paciente on public.citas (paciente_id);
 create index if not exists idx_recordatorios_estado on public.recordatorios (estado);
 
+-- ---------- Push notifications ----------
+create table if not exists public.push_suscripciones (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  endpoint text not null,
+  p256dh text not null,
+  auth text not null,
+  created_at timestamptz not null default now(),
+  unique(user_id, endpoint)
+);
+alter table public.push_suscripciones enable row level security;
+create policy push_own_subscriptions on public.push_suscripciones
+  for all using (user_id = auth.uid());
+
+create table if not exists public.push_cola (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  titulo text not null default 'CliniAgenda',
+  mensaje text not null,
+  url text default './dashboard.html',
+  estado text not null default 'pendiente' check (estado in ('pendiente', 'enviado', 'fallido')),
+  enviado_at timestamptz,
+  created_at timestamptz not null default now()
+);
+alter table public.push_cola enable row level security;
+create policy push_cola_admin on public.push_cola
+  for all using (auth.uid() in (select user_id from public.perfiles where rol = 'admin'));
+
+-- ---------- Disponibilidad especial ----------
+create table if not exists public.disponibilidad_especial (
+  id uuid primary key default gen_random_uuid(),
+  medico_id uuid not null references public.medicos(id) on delete cascade,
+  fecha date,
+  dia_semana text,
+  hora_inicio time not null,
+  hora_fin time not null,
+  tipo text not null default 'extra' check (tipo in ('extra', 'bloqueado')),
+  notas text,
+  created_at timestamptz not null default now(),
+  check (fecha is not null or dia_semana is not null),
+  check (dia_semana is null or dia_semana in ('Lunes','Martes','Miercoles','Jueves','Viernes','Sabado','Domingo'))
+);
+alter table public.disponibilidad_especial enable row level security;
+create policy des_admin_all on public.disponibilidad_especial
+  for all using (auth.uid() in (select user_id from public.perfiles where rol = 'admin'));
+create index if not exists idx_des_medico_fecha on public.disponibilidad_especial(medico_id, fecha);
+create index if not exists idx_des_medico_dia on public.disponibilidad_especial(medico_id, dia_semana) where dia_semana is not null;
+
 -- ---------- Funciones de apoyo ----------
 
 -- Rol del usuario autenticado (lee perfiles sin pasar por RLS)
