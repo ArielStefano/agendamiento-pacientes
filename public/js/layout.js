@@ -27,6 +27,7 @@ function setupLayout(title) {
       </div>
       <div class="actions">
         <button class="theme-toggle" id="theme-toggle" title="Cambiar tema" aria-label="Cambiar modo claro/oscuro"></button>
+        <button class="refresh-btn" onclick="location.reload()" title="Actualizar" aria-label="Actualizar página">🔄</button>
         <div class="bell-wrap" style="position:relative">
           <button class="bell" id="bell" title="Notificaciones" aria-label="Notificaciones" aria-expanded="false" aria-haspopup="true">🔔<span class="badge" id="bell-badge" aria-hidden="true">0</span></button>
           <div class="bell-dropdown" id="bell-dropdown" role="menu" aria-label="Lista de notificaciones">
