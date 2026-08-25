@@ -178,6 +178,65 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="modal-especiales" role="dialog" aria-modal="true" aria-labelledby="esp-titulo">
+    <div class="modal large">
+      <h3 id="esp-titulo">Horarios Especiales</h3>
+      <p class="muted small" id="esp-medico-nombre"></p>
+      <input type="hidden" id="esp-medico-id" />
+      <div class="form-row" style="margin-top:12px">
+        <div class="field">
+          <label for="esp-tipo">Tipo</label>
+          <select id="esp-tipo">
+            <option value="extra">Extra (agregar horario)</option>
+            <option value="bloqueado">Bloqueado (quitar horario)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="esp-frecuencia">Frecuencia</label>
+          <select id="esp-frecuencia" onchange="toggleEspFrecuencia()">
+            <option value="dia_semana">Día de la semana</option>
+            <option value="fecha">Fecha específica</option>
+          </select>
+        </div>
+        <div class="field" id="esp-dia-field">
+          <label for="esp-dia">Día</label>
+          <select id="esp-dia">
+            <option value="Lunes">Lunes</option>
+            <option value="Martes">Martes</option>
+            <option value="Miercoles">Miércoles</option>
+            <option value="Jueves">Jueves</option>
+            <option value="Viernes">Viernes</option>
+            <option value="Sabado">Sábado</option>
+            <option value="Domingo">Domingo</option>
+          </select>
+        </div>
+        <div class="field" id="esp-fecha-field" style="display:none">
+          <label for="esp-fecha">Fecha</label>
+          <input type="date" id="esp-fecha" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label for="esp-inicio">Hora inicio</label>
+          <input type="time" id="esp-inicio" value="13:00" />
+        </div>
+        <div class="field">
+          <label for="esp-fin">Hora fin</label>
+          <input type="time" id="esp-fin" value="14:00" />
+        </div>
+        <div class="field">
+          <label for="esp-notas">Notas (opcional)</label>
+          <input id="esp-notas" placeholder="Ej: Atención especial" />
+        </div>
+      </div>
+      <button class="btn" onclick="agregarEspecial()" style="margin-bottom:16px">Agregar horario especial</button>
+      <div id="tabla-especiales"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="cerrarEspeciales()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <script src="js/config.js"></script>
   <script src="vendor/supabase.min.js"></script>
   <script src="js/layout.js" defer></script>

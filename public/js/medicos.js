@@ -65,6 +65,7 @@ function renderTabla() {
         <td>
           <div class="row-actions">
             <button class="btn btn-sm btn-secondary" onclick="editarMedico('${m.id}')">Editar</button>
+            <button class="btn btn-sm btn-secondary" onclick="abrirEspeciales('${m.id}','${esc(m.nombre)}')">Especiales</button>
             <button class="btn btn-sm btn-danger" onclick="eliminarMedico('${m.id}')">Eliminar</button>
           </div>
         </td>
@@ -341,6 +342,105 @@ function esc(str) {
   return div.innerHTML;
 }
 
+// ── Horarios Especiales ──────────────────────────────────────
+let listaEspeciales = [];
+let espMedicoId = "";
+
+function toggleEspFrecuencia() {
+  const val = document.getElementById("esp-frecuencia").value;
+  document.getElementById("esp-dia-field").style.display = val === "dia_semana" ? "" : "none";
+  document.getElementById("esp-fecha-field").style.display = val === "fecha" ? "" : "none";
+}
+
+async function abrirEspeciales(medicoId, nombre) {
+  espMedicoId = medicoId;
+  document.getElementById("esp-medico-id").value = medicoId;
+  document.getElementById("esp-medico-nombre").textContent = `Médico: ${nombre}`;
+  document.getElementById("modal-especiales").classList.add("open");
+  await cargarEspeciales();
+}
+
+function cerrarEspeciales() {
+  document.getElementById("modal-especiales").classList.remove("open");
+}
+
+async function cargarEspeciales() {
+  const { data, error } = await supabase
+    .from("disponibilidad_especial")
+    .select("*")
+    .eq("medico_id", espMedicoId)
+    .order("created_at", { ascending: false });
+  if (error) return toast(error.message, "error");
+  listaEspeciales = data || [];
+  renderTablaEspeciales();
+}
+
+function renderTablaEspeciales() {
+  const el = document.getElementById("tabla-especiales");
+  if (!listaEspeciales.length) {
+    el.innerHTML = `<div class="card empty-state" style="padding:16px"><div class="icon">📅</div>No hay horarios especiales</div>`;
+    return;
+  }
+  const filas = listaEspeciales.map((e) => {
+    const cuando = e.fecha
+      ? `${e.fecha.slice(8, 10)}/${e.fecha.slice(5, 7)}/${e.fecha.slice(0, 4)}`
+      : e.dia_semana;
+    const tipo = e.tipo === "extra"
+      ? '<span class="badge" style="background:#16a34a;color:#fff">Extra</span>'
+      : '<span class="badge" style="background:#dc2626;color:#fff">Bloqueado</span>';
+    return `
+      <tr>
+        <td>${tipo}</td>
+        <td>${esc(cuando)}</td>
+        <td><strong>${app.hhmm(e.hora_inicio)} — ${app.hhmm(e.hora_fin)}</strong></td>
+        <td class="small muted">${esc(e.notas || "-")}</td>
+        <td><button class="btn btn-sm btn-danger" onclick="eliminarEspecial('${e.id}')">Eliminar</button></td>
+      </tr>`;
+  }).join("");
+  el.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr><th>Tipo</th><th>Cuándo</th><th>Horario</th><th>Notas</th><th>Acciones</th></tr></thead>
+    <tbody>${filas}</tbody>
+  </table></div>`;
+}
+
+async function agregarEspecial() {
+  const tipo = document.getElementById("esp-tipo").value;
+  const frecuencia = document.getElementById("esp-frecuencia").value;
+  const dia = document.getElementById("esp-dia").value;
+  const fecha = document.getElementById("esp-fecha").value;
+  const inicio = document.getElementById("esp-inicio").value;
+  const fin = document.getElementById("esp-fin").value;
+  const notas = document.getElementById("esp-notas").value.trim();
+
+  if (!inicio || !fin) return toast("Complete las horas", "error");
+  if (inicio >= fin) return toast("Inicio debe ser anterior a fin", "error");
+  if (frecuencia === "fecha" && !fecha) return toast("Seleccione una fecha", "error");
+
+  const row = {
+    medico_id: espMedicoId,
+    tipo,
+    hora_inicio: inicio + ":00",
+    hora_fin: fin + ":00",
+    notas: notas || null,
+    fecha: frecuencia === "fecha" ? fecha : null,
+    dia_semana: frecuencia === "dia_semana" ? dia : null,
+  };
+
+  const { error } = await supabase.from("disponibilidad_especial").insert(row);
+  if (error) return toast(error.message, "error");
+  toast("Horario especial agregado", "success");
+  document.getElementById("esp-notas").value = "";
+  cargarEspeciales();
+}
+
+async function eliminarEspecial(id) {
+  if (!confirm("¿Eliminar este horario especial?")) return;
+  const { error } = await supabase.from("disponibilidad_especial").delete().eq("id", id);
+  if (error) return toast(error.message, "error");
+  toast("Eliminado", "success");
+  cargarEspeciales();
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   await window.appReady;
   if (!app.user) return;
@@ -359,5 +459,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
   document.getElementById("modal-cred").addEventListener("click", (e) => {
     if (e.target === document.getElementById("modal-cred")) cerrarCred();
+  });
+  document.getElementById("modal-especiales").addEventListener("click", (e) => {
+    if (e.target === document.getElementById("modal-especiales")) cerrarEspeciales();
   });
 });

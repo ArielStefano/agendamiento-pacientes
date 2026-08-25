@@ -71,10 +71,17 @@ async function cargarSemana() {
     .order("hora");
 
   if (res.error) return toast(res.error.message, "error");
-  renderCalendario(medico, res.data || []);
+
+  const desRes = await supabase
+    .from("disponibilidad_especial")
+    .select("*")
+    .eq("medico_id", medicoId)
+    .or(`fecha.gte.${inicio},fecha.lte.${fin},dia_semana.not.is.null`);
+
+  renderCalendario(medico, res.data || [], desRes.data || []);
 }
 
-function renderCalendario(medico, citas) {
+function renderCalendario(medico, citas, especiales = []) {
   const fechas = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date(semanaInicio);
@@ -127,6 +134,24 @@ function renderCalendario(medico, citas) {
     return hm >= descansoIni && hm < descansoFin;
   }
 
+  // Horarios especiales: helpers
+  function getEspecialesParaFecha(fecha) {
+    const diaNombre = DIAS[fechas.indexOf(fecha)];
+    return especiales.filter((e) => e.fecha === fecha || e.dia_semana === diaNombre);
+  }
+
+  function esEspecialExtra(fecha, hora) {
+    const espList = getEspecialesParaFecha(fecha);
+    const hm = toMin(hora);
+    return espList.some((e) => e.tipo === "extra" && hm >= toMin(e.hora_inicio) && hm < toMin(e.hora_fin));
+  }
+
+  function esEspecialBloqueado(fecha, hora) {
+    const espList = getEspecialesParaFecha(fecha);
+    const hm = toMin(hora);
+    return espList.some((e) => e.tipo === "bloqueado" && hm >= toMin(e.hora_inicio) && hm < toMin(e.hora_fin));
+  }
+
   // Pre-calcular slots bloqueados por buffer domicilio por fecha
   const bloqueadosPorBuffer = {};
   if (bufferDom > 0) {
@@ -159,19 +184,30 @@ function renderCalendario(medico, citas) {
   }
   agregarRango(horaIni, minIni, horaFin, minFin);
   if (tieneSabado) agregarRango(horaIniSab, minIniSab, horaFinSab, minFinSab);
+  // Agregar horas de horarios especiales extra
+  for (const esp of especiales) {
+    if (esp.tipo === "extra") {
+      const ei = esp.hora_inicio;
+      const ef = esp.hora_fin;
+      const eih = Number(ei.slice(0, 2)), eim = Number(ei.slice(3, 5));
+      const efh = Number(ef.slice(0, 2)), efm = Number(ef.slice(3, 5));
+      agregarRango(eih, eim, efh, efm);
+    }
+  }
   const horas = Array.from(horasSet).sort();
 
   // Para cada celda, determinar si ese día/hora es laboral
   function esLaboralParaFecha(fecha, hora) {
     const diaIdx = fechas.indexOf(fecha);
     const diaNombre = DIAS[diaIdx];
-    if (!diasAtencion.includes(diaNombre.toLowerCase())) return false;
-    if (diaNombre === "Sabado" && tieneSabado) {
-      const hm = Number(hora.slice(0, 2)) * 60 + Number(hora.slice(3, 5));
-      return hm >= horaIniSab * 60 + minIniSab && hm < horaFinSab * 60 + minFinSab;
-    }
     const hm = Number(hora.slice(0, 2)) * 60 + Number(hora.slice(3, 5));
-    return hm >= horaIni * 60 + minIni && hm < horaFin * 60 + minFin;
+    if (diaNombre === "Sabado" && tieneSabado) {
+      if (hm >= horaIniSab * 60 + minIniSab && hm < horaFinSab * 60 + minFinSab) return true;
+    } else if (diasAtencion.includes(diaNombre.toLowerCase())) {
+      if (hm >= horaIni * 60 + minIni && hm < horaFin * 60 + minFin) return true;
+    }
+    if (esEspecialExtra(fecha, hora)) return true;
+    return false;
   }
 
   const porDia = (fecha) => citas.filter((c) => c.fecha === fecha).sort((a, b) => a.hora.localeCompare(b.hora));
@@ -200,12 +236,15 @@ function renderCalendario(medico, citas) {
       if (!cellHtml && !esLaboral) {
         html += `<div class="cal-cell cal-cell-empty"></div>`;
       } else if (!cellHtml && esLaboral && esFuturo && app.user && app.user.rol === "paciente") {
-        if (enDescanso(hora, fecha)) {
+        if (esEspecialBloqueado(fecha, hora)) {
+          html += `<div class="cal-cell cal-cell-descanso" title="Horario bloqueado (especial)"></div>`;
+        } else if (enDescanso(hora, fecha)) {
           html += `<div class="cal-cell cal-cell-descanso" title="Horario de descanso"></div>`;
         } else if (esSlotBloqueado(fecha, hora)) {
           html += `<div class="cal-cell cal-cell-buffer" title="En ruta (traslado)"></div>`;
         } else {
-          html += `<div class="cal-cell cal-slot" onclick="abrirAgendar('${fecha}','${hora}')" title="Agendar: ${hora}">${hora}</div>`;
+          const esExtra = esEspecialExtra(fecha, hora);
+          html += `<div class="cal-cell cal-slot${esExtra ? " cal-slot-extra" : ""}" onclick="abrirAgendar('${fecha}','${hora}')" title="${esExtra ? "Horario especial: " : "Agendar: "}${hora}">${hora}</div>`;
         }
       } else {
         html += `<div class="cal-cell">${cellHtml}</div>`;

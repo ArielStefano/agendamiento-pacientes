@@ -228,7 +228,15 @@ async function cargarDisponibilidad() {
     .eq("fecha", fecha)
     .neq("estado", "cancelada");
 
-  const slots = calcularSlots(medico, fecha, citasRes.data || []);
+  const desRes = await supabase
+    .from("disponibilidad_especial")
+    .select("*")
+    .eq("medico_id", medicoId);
+
+  const diaSemana = ["Domingo","Lunes","Martes","Miercoles","Jueves","Viernes","Sabado"][new Date(fecha + "T12:00:00").getDay()];
+  const especiales = (desRes.data || []).filter((e) => e.fecha === fecha || e.dia_semana === diaSemana);
+
+  const slots = calcularSlots(medico, fecha, citasRes.data || [], especiales);
 
   if (!slots.length) {
     slotsEl.innerHTML = `<span class="muted small">No hay horarios disponibles para este día.</span>`;
@@ -239,10 +247,12 @@ async function cargarDisponibilidad() {
     .join("");
 }
 
-function calcularSlots(medico, fecha, citas) {
+function calcularSlots(medico, fecha, citas, especiales = []) {
   const dias = medico.dias_atencion || [];
   const diaSemana = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"][new Date(fecha + "T12:00:00").getDay()];
-  if (!dias.includes(diaSemana)) return [];
+  if (!dias.includes(diaSemana)) {
+    if (!especiales.length) return [];
+  }
 
   const dur = medico.duracion_cita_min || 30;
   const bufferDom = medico.buffer_domicilio_min || 0;
@@ -288,6 +298,29 @@ function calcularSlots(medico, fecha, citas) {
 
     slots.push(toHHMM(t));
   }
+
+  // Horarios especiales: agregar slots extra y quitar bloqueados
+  if (especiales.length) {
+    for (const esp of especiales) {
+      const ei = toMin(esp.hora_inicio);
+      const ef = toMin(esp.hora_fin);
+      if (esp.tipo === "extra") {
+        for (let t = ei; t + dur <= ef; t += dur) {
+          const hhmm = toHHMM(t);
+          if (slots.includes(hhmm)) continue;
+          const conflicto = ocupados.some((o) => t < o.f && o.i < t + dur);
+          if (!conflicto) slots.push(hhmm);
+        }
+      } else if (esp.tipo === "bloqueado") {
+        for (let t = ei; t + dur <= ef; t += dur) {
+          const idx = slots.indexOf(toHHMM(t));
+          if (idx !== -1) slots.splice(idx, 1);
+        }
+      }
+    }
+    slots.sort();
+  }
+
   return slots;
 }
 
