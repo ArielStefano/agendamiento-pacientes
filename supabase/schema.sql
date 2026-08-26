@@ -411,7 +411,7 @@ begin
 
   select count(*) into v_conflicto
   from public.citas
-  where medico_id = p_medico and fecha = p_fecha and estado <> 'cancelada'
+  where medico_id = p_medico and fecha = p_fecha and estado not in ('cancelada', 'cancelada_clausula')
     and hora < (p_hora + v_dur * interval '1 minute')
     and p_hora < (hora + duracion_min * interval '1 minute');
 
@@ -509,7 +509,7 @@ begin
 
   select count(*) into v_conflicto
   from public.citas
-  where medico_id = p_medico and fecha = p_fecha and estado <> 'cancelada'
+  where medico_id = p_medico and fecha = p_fecha and estado not in ('cancelada', 'cancelada_clausula')
     and id <> p_id
     and hora < (p_hora + v_dur * interval '1 minute')
     and p_hora < (hora + duracion_min * interval '1 minute');
