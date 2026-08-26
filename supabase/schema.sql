@@ -63,7 +63,7 @@ create table if not exists public.citas (
   motivo text,
   lugar text not null default 'Consultorio',
   estado      text not null default 'programada'
-                check (estado in ('solicitada', 'programada', 'confirmada', 'completada', 'cancelada')),
+                check (estado in ('solicitada', 'programada', 'confirmada', 'completada', 'cancelada', 'cancelada_clausula')),
   creada_por uuid references auth.users (id),
   created_at timestamptz not null default now(),
   updated_at timestamptz
@@ -541,7 +541,7 @@ declare
   v_cita public.citas;
   v_rol text;
 begin
-  if p_estado not in ('solicitada', 'programada', 'confirmada', 'completada', 'cancelada') then
+  if p_estado not in ('solicitada', 'programada', 'confirmada', 'completada', 'cancelada', 'cancelada_clausula') then
     raise exception 'Estado inválido';
   end if;
 

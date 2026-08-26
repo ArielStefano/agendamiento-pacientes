@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (resCitas.error) throw resCitas.error;
       const citas = resCitas.data || [];
 
-      const hoyCitas = citas.filter((c) => c.fecha === hoy && c.estado !== "cancelada");
+      const hoyCitas = citas.filter((c) => c.fecha === hoy && !["cancelada", "cancelada_clausula"].includes(c.estado));
       const proximas = citas.filter((c) => c.estado === "programada" || c.estado === "confirmada");
 
       document.getElementById("dashboard-content").innerHTML = `

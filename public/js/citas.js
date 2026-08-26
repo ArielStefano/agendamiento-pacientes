@@ -226,7 +226,7 @@ async function cargarDisponibilidad() {
     .select("hora, duracion_min, lugar, estado")
     .eq("medico_id", medicoId)
     .eq("fecha", fecha)
-    .neq("estado", "cancelada");
+    .not("estado", "in", "(cancelada,cancelada_clausula)");
 
   const desRes = await supabase
     .from("disponibilidad_especial")

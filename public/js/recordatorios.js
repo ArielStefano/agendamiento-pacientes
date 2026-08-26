@@ -14,7 +14,7 @@ async function cargarMedios() {
       .from("citas")
       .select("id, fecha, hora, pacientes(nombre), medicos(nombre, especialidad)")
       .gte("fecha", app.hoyISO())
-      .neq("estado", "cancelada")
+      .not("estado", "in", "(cancelada,cancelada_clausula)")
       .order("fecha")
       .order("hora"),
     supabase.from("recordatorios").select("cita_id"),
