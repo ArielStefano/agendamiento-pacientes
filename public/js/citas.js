@@ -149,7 +149,7 @@ function renderTabla() {
     </div>`;
 }
 
-async function abrirModalCita(cita = null) {
+async function abrirModalCita(cita = null, pre = null) {
   document.getElementById("cita-titulo").textContent = cita ? "Editar cita" : "Nueva cita";
   document.getElementById("c-id").value = cita ? cita.id : "";
   document.getElementById("c-motivo").value = cita ? cita.motivo || "" : "";
@@ -171,9 +171,9 @@ async function abrirModalCita(cita = null) {
     }
   } else {
     document.getElementById("c-paciente").value = "";
-    const medicoDefault = app.isMedico && app.user.medico_id ? app.user.medico_id : listaMedicos[0] ? listaMedicos[0].id : "";
+    const medicoDefault = (pre && pre.medico) || (app.isMedico && app.user.medico_id) || (listaMedicos[0] ? listaMedicos[0].id : "");
     document.getElementById("c-medico").value = medicoDefault;
-    document.getElementById("c-fecha").value = app.hoyISO();
+    document.getElementById("c-fecha").value = (pre && pre.fecha) || app.hoyISO();
     actualizarLugares(medicoDefault, "Consultorio");
     cargarDisponibilidad();
   }
@@ -536,8 +536,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (e.target === document.getElementById("modal-cancelar")) cerrarModalCancelar();
   });
 
-  // Auto-abrir modal de nueva cita si se llega con ?nueva=true
-  if (new URLSearchParams(window.location.search).get("nueva") === "true") {
-    setTimeout(() => abrirModalCita(), 300);
+  // Auto-abrir modal de nueva cita si se llega con ?nueva=true, preseleccionando médico y fecha desde el calendario
+  const q = new URLSearchParams(window.location.search);
+  if (q.get("nueva") === "true") {
+    setTimeout(() => abrirModalCita(null, { medico: q.get("medico"), fecha: q.get("fecha") }), 300);
   }
 });

@@ -235,7 +235,7 @@ function renderCalendario(medico, citas, especiales = []) {
       }
       if (!cellHtml && !esLaboral) {
         html += `<div class="cal-cell cal-cell-empty"></div>`;
-      } else if (!cellHtml && esLaboral && esFuturo && app.user && app.user.rol === "paciente") {
+      } else if (!cellHtml && esLaboral && esFuturo) {
         if (esEspecialBloqueado(fecha, hora)) {
           html += `<div class="cal-cell cal-cell-descanso" title="Horario bloqueado (especial)"></div>`;
         } else if (enDescanso(hora, fecha)) {
@@ -244,7 +244,11 @@ function renderCalendario(medico, citas, especiales = []) {
           html += `<div class="cal-cell cal-cell-buffer" title="En ruta (traslado)"></div>`;
         } else {
           const esExtra = esEspecialExtra(fecha, hora);
-          html += `<div class="cal-cell cal-slot${esExtra ? " cal-slot-extra" : ""}" onclick="abrirAgendar('${fecha}','${hora}')" title="${esExtra ? "Horario especial: " : "Agendar: "}${hora}">${hora}</div>`;
+          const esPaciente = app.user && app.user.rol === "paciente";
+          const onClick = esPaciente
+            ? `abrirAgendar('${fecha}','${hora}')`
+            : `location.href='citas.html?nueva=true&medico=${medico.id}&fecha=${fecha}'`;
+          html += `<div class="cal-cell cal-slot${esExtra ? " cal-slot-extra" : ""}" onclick="${onClick}" title="${esExtra ? "Horario especial: " : "Agendar: "}${hora}">${hora}</div>`;
         }
       } else {
         html += `<div class="cal-cell">${cellHtml}</div>`;
