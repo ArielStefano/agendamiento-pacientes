@@ -46,6 +46,7 @@ const app = {
 
     this.renderSidebar();
     this.renderUser();
+    this.setupTopLogout();
     this.setupBell();
     this.loadNotifications();
     this.setupMobileMenu();
@@ -126,6 +127,11 @@ const app = {
         bell.setAttribute("aria-expanded", "false");
       }
     });
+  },
+
+  setupTopLogout() {
+    const btn = document.getElementById("btn-logout-top");
+    if (btn) btn.addEventListener("click", () => this.logout());
   },
 
   async loadNotifications() {

@@ -51,7 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
         p_telefono: document.getElementById("telefono").value || null,
         p_fecha_nacimiento: null,
         p_direccion: null,
-        p_alergias: null,
+        p_alergias: document.getElementById("alergias").value || null,
         p_contrasena: document.getElementById("contrasena").value,
         p_username: document.getElementById("username").value,
       });

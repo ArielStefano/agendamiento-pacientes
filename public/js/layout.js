@@ -41,6 +41,7 @@ function setupLayout(title) {
             </div>
           </div>
         </div>
+        <button id="btn-logout-top" class="logout-top" title="Cerrar sesión" aria-label="Cerrar sesión">🚪</button>
         <span id="top-user" class="muted small"></span>
       </div>
     `;
