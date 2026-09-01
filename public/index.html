@@ -82,8 +82,8 @@
 
     <form id="login-form">
       <div class="field">
-        <label for="email">Correo electrónico</label>
-        <input type="email" id="email" name="email" required autocomplete="username" placeholder="usuario@clinica.com" />
+        <label for="email">Correo o nombre de usuario</label>
+        <input type="text" id="email" name="email" required autocomplete="username" placeholder="usuario o correo@ejemplo.com" />
       </div>
       <div class="field">
         <label for="password">Contraseña</label>
@@ -124,11 +124,24 @@
         btn.textContent = "Ingresando...";
 
         try {
+          const input = document.getElementById("email").value.trim();
+          let loginEmail = input;
+
+          // Si no contiene @, intentar resolver como nombre de usuario
+          if (!input.includes("@")) {
+            const { data: emailResolvido } = await supabase.rpc("resolver_email_por_usuario", { p_input: input });
+            if (emailResolvido) {
+              loginEmail = emailResolvido;
+            } else {
+              throw new Error("Nombre de usuario no encontrado");
+            }
+          }
+
           const { data, error } = await supabase.auth.signInWithPassword({
-            email: document.getElementById("email").value,
+            email: loginEmail,
             password: document.getElementById("password").value,
           });
-          if (error) throw new Error("Correo o contraseña incorrectos");
+          if (error) throw new Error("Correo/usuario o contraseña incorrectos");
           alertEl.classList.remove("show");
           window.location.href = "dashboard.html";
         } catch (err) {

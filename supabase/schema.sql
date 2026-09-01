@@ -36,8 +36,12 @@ create table if not exists public.perfiles (
   paciente_id uuid references public.pacientes (id) on delete cascade,
   representante boolean not null default false,
   activo boolean not null default true,
+  username text,
   created_at timestamptz not null default now()
 );
+
+create unique index if not exists perfiles_username_unique
+  on public.perfiles (lower(username)) where username is not null;
 
 create table if not exists public.pacientes (
   id uuid primary key default gen_random_uuid(),
@@ -165,6 +169,39 @@ $$;
 grant execute on function public.rol_usuario() to authenticated;
 grant execute on function public.medico_id_usuario() to authenticated;
 grant execute on function public.paciente_id_usuario() to authenticated;
+
+-- Resolver login por nombre de usuario o email (para la página de acceso)
+create or replace function public.resolver_email_por_usuario(p_input text)
+returns text
+language plpgsql
+security definer
+set search_path = public
+stable
+as $$
+declare
+  v_input text;
+  v_email text;
+begin
+  v_input := trim(coalesce(p_input, ''));
+  if v_input = '' then return null; end if;
+
+  -- Si contiene @, tratar como email directamente
+  if v_input like '%@%' then
+    return lower(v_input);
+  end if;
+
+  -- Buscar por username en perfiles → auth.users
+  select au.email into v_email
+    from public.perfiles pf
+    join auth.users au on au.id = pf.user_id
+   where lower(pf.username) = lower(v_input)
+   limit 1;
+
+  return v_email;
+end;
+$$;
+
+grant execute on function public.resolver_email_por_usuario(text) to anon, authenticated;
 
 -- ---------- Triggers ----------
 
@@ -637,6 +674,7 @@ create or replace function public.crear_medico_admin(
   p_hora_fin time,
   p_duracion int,
   p_contrasena text,
+  p_username text default null,
   p_hora_inicio_sabado time default null,
   p_hora_fin_sabado time default null,
   p_buffer_domicilio_min int default 30,
@@ -650,6 +688,7 @@ returns jsonb
 language plpgsql security definer set search_path = public
 as $$
 declare
+  v_username text;
   v_email text;
   v_dias text[];
   v_user_id uuid;
@@ -659,10 +698,26 @@ begin
     raise exception 'Solo el administrador puede crear médicos';
   end if;
 
-  v_email := lower(trim(p_email));
+  v_username := trim(lower(coalesce(p_username, '')));
+  v_email := trim(lower(coalesce(p_email, '')));
+
   if p_nombre is null or trim(p_nombre) = '' then raise exception 'El nombre es obligatorio'; end if;
   if p_especialidad is null or trim(p_especialidad) = '' then raise exception 'La especialidad es obligatoria'; end if;
-  if v_email is null or v_email = '' then raise exception 'El email es obligatorio'; end if;
+
+  -- Resolver email
+  if v_username <> '' then
+    if v_username !~ '^[a-z0-9._-]{3,30}$' then
+      raise exception 'El nombre de usuario debe tener entre 3 y 30 caracteres (letras, números, puntos, guiones o guion bajo)';
+    end if;
+    if exists (select 1 from public.perfiles where lower(username) = v_username and username is not null) then
+      raise exception 'Ese nombre de usuario ya está en uso';
+    end if;
+    if v_email = '' then
+      v_email := v_username || '@clinica.local';
+    end if;
+  end if;
+
+  if v_email = '' then raise exception 'El email es obligatorio'; end if;
   if p_contrasena is null or length(p_contrasena) < 6 then raise exception 'La contraseña debe tener al menos 6 caracteres'; end if;
   if p_duracion is null or p_duracion <= 0 then raise exception 'Duración inválida'; end if;
   if p_hora_inicio >= p_hora_fin then raise exception 'El horario de inicio debe ser anterior al de fin'; end if;
@@ -723,7 +778,7 @@ begin
   values (v_user_id, v_user_id, v_user_id,
           jsonb_build_object('sub', v_user_id, 'email', v_email), 'email', now(), now(), now());
 
-  insert into public.medicos (nombre, especialidad, telefono, email, dias_atencion,
+insert into public.medicos (nombre, especialidad, telefono, email, dias_atencion,
     hora_inicio, hora_fin, duracion_cita_min, hora_inicio_sabado, hora_fin_sabado,
     buffer_domicilio_min, hora_inicio_descanso, hora_fin_descanso,
     hora_inicio_descanso_sabado, hora_fin_descanso_sabado, lugares_atencion)
@@ -733,17 +788,17 @@ begin
     p_hora_inicio_descanso_sabado, p_hora_fin_descanso_sabado, p_lugares_atencion)
   returning id into v_medico_id;
 
-  insert into public.perfiles (user_id, nombre, rol, medico_id)
-  values (v_user_id, trim(p_nombre), 'medico', v_medico_id);
+  insert into public.perfiles (user_id, nombre, rol, medico_id, username)
+  values (v_user_id, trim(p_nombre), 'medico', v_medico_id, nullif(v_username, ''));
 
   return jsonb_build_object('medico_id', v_medico_id, 'user_id', v_user_id, 'email', v_email);
 end;
 $$;
 
-grant execute on function public.crear_medico_admin(text, text, text, text, jsonb, time, time, int, text, time, time, int, time, time, time, time, jsonb) to authenticated;
-revoke all on function public.crear_medico_admin(text, text, text, text, jsonb, time, time, int, text, time, time, int, time, time, time, time, jsonb) from public;
+grant execute on function public.crear_medico_admin(text, text, text, text, jsonb, time, time, int, text, text, time, time, int, time, time, time, time, jsonb) to authenticated;
+revoke all on function public.crear_medico_admin(text, text, text, text, jsonb, time, time, int, text, text, time, time, int, time, time, time, time, jsonb) from public;
 
--- Edita médico (puede cambiar email y contraseña de acceso)
+-- Edita médico (puede cambiar email/username y contraseña de acceso)
 create or replace function public.actualizar_medico_admin(
   p_id uuid,
   p_nombre text,
@@ -755,6 +810,7 @@ create or replace function public.actualizar_medico_admin(
   p_hora_fin time,
   p_duracion int,
   p_contrasena text default null,
+  p_username text default null,
   p_hora_inicio_sabado time default null,
   p_hora_fin_sabado time default null,
   p_buffer_domicilio_min int default 30,
@@ -768,7 +824,9 @@ returns jsonb
 language plpgsql security definer set search_path = public
 as $$
 declare
+  v_username text;
   v_email text;
+  v_actual_username text;
   v_antiguo text;
   v_user_id uuid;
   v_dias text[];
@@ -777,12 +835,42 @@ begin
     raise exception 'Solo el administrador puede editar médicos';
   end if;
 
-  v_email := lower(trim(p_email));
+  v_username := trim(lower(coalesce(p_username, '')));
+  v_email := trim(lower(coalesce(p_email, '')));
+
   if p_nombre is null or trim(p_nombre) = '' then raise exception 'El nombre es obligatorio'; end if;
   if p_especialidad is null or trim(p_especialidad) = '' then raise exception 'La especialidad es obligatoria'; end if;
-  if v_email is null or v_email = '' then raise exception 'El email es obligatorio'; end if;
   if p_duracion is null or p_duracion <= 0 then raise exception 'Duración inválida'; end if;
   if p_hora_inicio >= p_hora_fin then raise exception 'El horario de inicio debe ser anterior al de fin'; end if;
+
+  -- Si viene username y es distinto al actual, validar y derivar email
+  select m.email, p.user_id into v_antiguo, v_user_id
+  from public.medicos m left join public.perfiles p on p.medico_id = m.id
+  where m.id = p_id;
+  if v_antiguo is null then raise exception 'Médico no encontrado'; end if;
+
+  select pf.username into v_actual_username
+    from public.perfiles pf where pf.medico_id = p_id limit 1;
+
+  -- Username nuevo o cambiado: validar
+  if v_username <> '' then
+    if v_username !~ '^[a-z0-9._-]{3,30}$' then
+      raise exception 'El nombre de usuario debe tener entre 3 y 30 caracteres (letras, números, puntos, guiones o guion bajo)';
+    end if;
+    if exists (select 1 from public.perfiles where lower(username) = v_username and username is not null and medico_id <> p_id) then
+      raise exception 'Ese nombre de usuario ya está en uso';
+    end if;
+  end if;
+
+  -- Derivar email solo si cambió el username y el email actual era interno (@clinica.local)
+  if v_email = '' then
+    if v_username <> '' and v_username <> lower(v_actual_username)
+       and (lower(v_antiguo) like '%@clinica.local' or lower(v_antiguo) like '%@localhost') then
+      v_email := v_username || '@clinica.local';
+    else
+      v_email := v_antiguo;
+    end if;
+  end if;
 
   v_dias := array(select jsonb_array_elements_text(p_dias));
   if v_dias is null or array_length(v_dias, 1) is null then raise exception 'Seleccione al menos un día de atención'; end if;
@@ -817,13 +905,8 @@ begin
     end if;
   end if;
 
-  select m.email, p.user_id into v_antiguo, v_user_id
-  from public.medicos m left join public.perfiles p on p.medico_id = m.id
-  where m.id = p_id;
-  if v_antiguo is null then raise exception 'Médico no encontrado'; end if;
-
   if v_email <> lower(v_antiguo) then
-    if exists (select 1 from auth.users u where lower(u.email) = v_email and u.id <> coalesce(v_user_id, uuid_nil())) then
+    if exists (select 1 from auth.users u where lower(u.email) = v_email and u.id <> coalesce(v_user_id, '00000000-0000-0000-0000-000000000000'::uuid)) then
       raise exception 'Ya existe un usuario con ese email';
     end if;
     if exists (select 1 from public.medicos m where lower(m.email) = v_email and m.id <> p_id) then
@@ -833,7 +916,6 @@ begin
     update auth.identities
       set identity_data = jsonb_build_object('sub', v_user_id, 'email', v_email),
           provider_id = v_user_id,
-          email = v_email,
           updated_at = now()
       where user_id = v_user_id;
   end if;
@@ -859,14 +941,19 @@ begin
       lugares_atencion = p_lugares_atencion
   where id = p_id;
 
-  update public.perfiles set nombre = trim(p_nombre) where medico_id = p_id;
+  update public.perfiles set nombre = trim(p_nombre)
+    where medico_id = p_id;
+
+  if v_username <> '' then
+    update public.perfiles set username = nullif(v_username, '') where medico_id = p_id;
+  end if;
 
   return jsonb_build_object('ok', true, 'medico_id', p_id, 'email', v_email);
 end;
 $$;
 
-grant execute on function public.actualizar_medico_admin(uuid, text, text, text, text, jsonb, time, time, int, text, time, time, int, time, time, time, time) to authenticated;
-revoke all on function public.actualizar_medico_admin(uuid, text, text, text, text, jsonb, time, time, int, text, time, time, int, time, time, time, time) from public;
+grant execute on function public.actualizar_medico_admin(uuid, text, text, text, text, jsonb, time, time, int, text, text, time, time, int, time, time, time, time, jsonb) to authenticated;
+revoke all on function public.actualizar_medico_admin(uuid, text, text, text, text, jsonb, time, time, int, text, text, time, time, int, time, time, time, time, jsonb) from public;
 
 -- Elimina médico (solo si no tiene citas) junto con su usuario de acceso
 create or replace function public.eliminar_medico_admin(p_id uuid)
@@ -958,18 +1045,22 @@ create or replace function public.registrar_paciente(
   p_fecha_nacimiento date,
   p_direccion text,
   p_alergias text,
-  p_contrasena text
+  p_contrasena text,
+  p_username text default null
 )
 returns jsonb
 language plpgsql security definer set search_path = public
 as $$
 declare
+  v_username text;
   v_email text;
   v_user_id uuid;
   v_paciente_id uuid;
   v_nombre_cuenta text;
 begin
-  v_email := lower(trim(p_email));
+  v_username := trim(lower(coalesce(p_username, '')));
+  v_email := trim(lower(coalesce(p_email, '')));
+
   if p_nombre_paciente is null or trim(p_nombre_paciente) = '' then
     raise exception 'El nombre del paciente es obligatorio';
   end if;
@@ -981,7 +1072,23 @@ begin
   else
     v_nombre_cuenta := trim(p_nombre_paciente);
   end if;
-  if v_email is null or v_email = '' then raise exception 'El email es obligatorio'; end if;
+
+  -- Resolver email: preferir username si se da, si no, email directo
+  if v_username <> '' then
+    if v_username !~ '^[a-z0-9._-]{3,30}$' then
+      raise exception 'El nombre de usuario debe tener entre 3 y 30 caracteres (letras, números, puntos, guiones o guion bajo)';
+    end if;
+    if exists (select 1 from public.perfiles where lower(username) = v_username and username is not null) then
+      raise exception 'Ese nombre de usuario ya está en uso';
+    end if;
+    if v_email = '' then
+      v_email := v_username || '@clinica.local';
+    end if;
+  end if;
+
+  if v_email = '' then
+    raise exception 'Debe ingresar un nombre de usuario o un correo electrónico';
+  end if;
   if v_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then raise exception 'El email no es válido'; end if;
   if p_contrasena is null or length(p_contrasena) < 6 then raise exception 'La contraseña debe tener al menos 6 caracteres'; end if;
 
@@ -1009,16 +1116,16 @@ begin
   values (nullif(trim(p_documento), ''), trim(p_nombre_paciente), v_email, p_telefono, p_fecha_nacimiento, p_direccion, p_alergias)
   returning id into v_paciente_id;
 
-  insert into public.perfiles (user_id, nombre, rol, paciente_id, representante)
-  values (v_user_id, v_nombre_cuenta, 'paciente', v_paciente_id, coalesce(p_es_representante, false));
+  insert into public.perfiles (user_id, nombre, rol, paciente_id, representante, username)
+  values (v_user_id, v_nombre_cuenta, 'paciente', v_paciente_id, coalesce(p_es_representante, false), nullif(v_username, ''));
 
   return jsonb_build_object('ok', true, 'email', v_email);
 end;
 $$;
 
 -- Accesible por cualquiera (página pública de registro) y por usuarios autenticados
-grant execute on function public.registrar_paciente(text, boolean, text, text, text, text, date, text, text, text) to anon, authenticated;
-revoke all on function public.registrar_paciente(text, boolean, text, text, text, text, date, text, text, text) from public;
+grant execute on function public.registrar_paciente(text, boolean, text, text, text, text, date, text, text, text, text) to anon, authenticated;
+revoke all on function public.registrar_paciente(text, boolean, text, text, text, text, date, text, text, text, text) from public;
 
 -- ---------- Pacientes: gestión admin (CRUD) ----------
 

@@ -47,17 +47,18 @@ document.addEventListener("DOMContentLoaded", () => {
         p_es_representante: esRepresentante,
         p_nombre_cuenta: esRepresentante ? repNombre.value : null,
         p_documento: null,
-        p_email: document.getElementById("email").value,
+        p_email: null,
         p_telefono: document.getElementById("telefono").value || null,
         p_fecha_nacimiento: null,
         p_direccion: null,
         p_alergias: null,
         p_contrasena: document.getElementById("contrasena").value,
+        p_username: document.getElementById("username").value,
       });
       if (error) throw new Error(error.message);
 
       okEl.innerHTML =
-        "Cuenta creada correctamente. Ya puede iniciar sesión con su correo y contraseña. " +
+        "Cuenta creada correctamente. Ya puede iniciar sesión con su nombre de usuario. " +
         '<a href="index.html" class="small">Ir a iniciar sesión →</a>';
       okEl.classList.add("show");
       document.getElementById("registro-form").reset();

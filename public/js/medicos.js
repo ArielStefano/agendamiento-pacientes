@@ -8,7 +8,7 @@ const DIAS_SEMANA = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabad
 async function cargarMedicos() {
   let query = supabase
     .from("medicos")
-    .select("*, citas(count)")
+    .select("*, citas(count), perfiles:perfiles!perfiles_medico_id_fkey(username)")
     .order("nombre");
 
   if (buscando) {
@@ -54,12 +54,13 @@ function renderTabla() {
   const filas = listaMedicos
     .map((m) => {
       const totalCitas = (m.citas && m.citas.length && m.citas[0].count) || 0;
+      const username = (m.perfiles && m.perfiles[0] && m.perfiles[0].username) || m.email || "-";
       return `
       <tr>
         <td><strong>${esc(m.nombre)}</strong></td>
         <td>${esc(m.especialidad)}</td>
         <td>${esc(m.telefono || "-")}</td>
-        <td>${esc(m.email || "-")}</td>
+        <td>${esc(username)}</td>
         <td class="small muted">${fmtAgenda(m)}</td>
         <td><span class="pill">${totalCitas} citas</span></td>
         <td>
@@ -78,7 +79,7 @@ function renderTabla() {
       <table>
         <thead>
           <tr>
-            <th scope="col">Nombre</th><th scope="col">Especialidad</th><th scope="col">Teléfono</th><th scope="col">Email</th>
+            <th scope="col">Nombre</th><th scope="col">Especialidad</th><th scope="col">Teléfono</th><th scope="col">Usuario</th>
             <th scope="col">Agenda</th><th scope="col">Citas</th><th scope="col">Acciones</th>
           </tr>
         </thead>
@@ -100,7 +101,7 @@ function abrirModalMedico(medico = null) {
   document.getElementById("m-nombre").value = medico ? medico.nombre : "";
   document.getElementById("m-especialidad").value = medico ? medico.especialidad : "";
   document.getElementById("m-telefono").value = medico ? medico.telefono || "" : "";
-  document.getElementById("m-email").value = medico ? medico.email || "" : "";
+  document.getElementById("m-email").value = medico ? ((medico.perfiles && medico.perfiles[0] && medico.perfiles[0].username) || medico.email || "") : "";
   document.getElementById("m-pass").value = "";
   document.getElementById("m-duracion").value = medico ? medico.duracion_cita_min : 30;
   document.getElementById("m-buffer").value = medico ? (medico.buffer_domicilio_min || 30) : 30;
@@ -250,10 +251,13 @@ async function guardarMedico() {
 
   if (!nombre) return toast("El nombre es obligatorio", "error");
   if (!especialidad) return toast("La especialidad es obligatoria", "error");
-  if (!email) return toast("El email es obligatorio", "error");
+  if (!email) return toast("El nombre de usuario es obligatorio", "error");
   if (!dias.length) return toast("Seleccione al menos un día de atención", "error");
   if (inicio >= fin) return toast("La hora de inicio debe ser anterior a la de fin", "error");
   if (sabadoOn && hora_inicio_sabado >= hora_fin_sabado) return toast("Horario sábado: inicio debe ser anterior a fin", "error");
+
+  // Al editar: si el campo es username (sin @), el RPC conserva/deriva el email interno
+  const emailInterno = email.includes("@") ? email : null;
 
   let error = null;
   let datos = null;
@@ -264,11 +268,13 @@ async function guardarMedico() {
       p_nombre: nombre,
       p_especialidad: especialidad,
       p_telefono: telefono || null,
-      p_email: email,
+      p_email: emailInterno,
       p_dias: dias,
       p_hora_inicio: inicio,
       p_hora_fin: fin,
       p_duracion: duracion,
+      p_contrasena: pass,
+      p_username: email.includes("@") ? null : email,
       p_hora_inicio_sabado: hora_inicio_sabado,
       p_hora_fin_sabado: hora_fin_sabado,
       p_buffer_domicilio_min: buffer,
@@ -278,7 +284,6 @@ async function guardarMedico() {
       p_hora_fin_descanso_sabado: descansoSabFin ? descansoSabFin + ":00" : null,
       p_lugares_atencion: lugares_atencion,
     };
-    if (pass) params.p_contrasena = pass;
     ({ data: datos, error } = await supabase.rpc("actualizar_medico_admin", params));
     if (!error) toast("Médico actualizado", "success");
   } else {
@@ -287,12 +292,13 @@ async function guardarMedico() {
       p_nombre: nombre,
       p_especialidad: especialidad,
       p_telefono: telefono || null,
-      p_email: email,
+      p_email: null,
       p_dias: dias,
       p_hora_inicio: inicio,
       p_hora_fin: fin,
       p_duracion: duracion,
       p_contrasena: pass,
+      p_username: email,
       p_hora_inicio_sabado: hora_inicio_sabado,
       p_hora_fin_sabado: hora_fin_sabado,
       p_buffer_domicilio_min: buffer,
