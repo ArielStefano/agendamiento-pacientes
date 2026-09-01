@@ -17,7 +17,7 @@ async function initCitas() {
   if (medicos.error) return toast(medicos.error.message, "error");
   listaMedicos = medicos.data || [];
 
-  const pacientes = await supabase.from("pacientes").select("id, nombre, documento").order("nombre");
+  const pacientes = await supabase.from("pacientes").select("id, nombre, documento, alergias").order("nombre");
   if (pacientes.error) return toast(pacientes.error.message, "error");
   listaPacientes = pacientes.data || [];
 
@@ -55,7 +55,7 @@ async function aplicarFiltros() {
   const buscar = (document.getElementById("f-buscar")?.value || "").trim();
   let query = supabase
     .from("citas")
-    .select("id, fecha, hora, motivo, lugar, estado, motivo_cancelacion, pacientes(id, nombre, telefono), medicos(id, nombre, especialidad)")
+    .select("id, fecha, hora, motivo, lugar, estado, motivo_cancelacion, pacientes(id, nombre, telefono, alergias), medicos(id, nombre, especialidad)")
     .order("fecha", { ascending: true })
     .order("hora", { ascending: true });
 
@@ -124,7 +124,7 @@ function renderTabla() {
       <tr>
         <td><strong>${app.formatFechaLarga(c.fecha)}</strong></td>
         <td><strong>${app.hhmm(c.hora)}</strong></td>
-        <td>${esc((c.pacientes && c.pacientes.nombre) || "")}</td>
+        <td>${esc((c.pacientes && c.pacientes.nombre) || "")}${c.pacientes && c.pacientes.alergias ? ` <span class="badge cancelada" title="Alergias: ${esc(c.pacientes.alergias)}">⚠️ Alergias</span>` : ""}</td>
         <td>${esc((c.medicos && c.medicos.nombre) || "")} <span class="muted small">(${esc((c.medicos && c.medicos.especialidad) || "")})</span></td>
         <td>${c.lugar.toLowerCase() === "domicilio" ? "🏠 Domicilio" : "🏥 " + esc(c.lugar)}</td>
         <td>${esc(c.motivo || "-")}</td>
@@ -157,6 +157,7 @@ async function abrirModalCita(cita = null) {
 
   if (cita) {
     document.getElementById("c-paciente").value = cita.pacientes ? cita.pacientes.id : "";
+    mostrarAlergiasPaciente();
     document.getElementById("c-medico").value = cita.medicos ? cita.medicos.id : "";
     document.getElementById("c-fecha").value = cita.fecha;
     actualizarLugares(cita.medicos ? cita.medicos.id : "", cita.lugar || "Consultorio");
@@ -178,6 +179,19 @@ async function abrirModalCita(cita = null) {
   }
 
   document.getElementById("modal-cita").classList.add("open");
+}
+
+function mostrarAlergiasPaciente() {
+  const id = document.getElementById("c-paciente").value;
+  const el = document.getElementById("c-alergias");
+  const p = listaPacientes.find((x) => x.id === id);
+  if (p && p.alergias) {
+    el.style.display = "block";
+    el.innerHTML = `⚠️ <strong>Alergias:</strong> ${esc(p.alergias)}`;
+  } else {
+    el.style.display = "none";
+    el.innerHTML = "";
+  }
 }
 
 function cerrarModalCita() {

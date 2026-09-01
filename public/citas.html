@@ -75,8 +75,9 @@
       <div class="form-row">
         <div class="field">
           <label for="c-paciente">Paciente *</label>
-          <select id="c-paciente"></select>
+          <select id="c-paciente" onchange="mostrarAlergiasPaciente()"></select>
         </div>
+        <div id="c-alergias" class="alert alert-warning" style="display:none"></div>
         <div class="field">
           <label for="c-medico">Médico *</label>
           <select id="c-medico" onchange="cargarDisponibilidad(); actualizarLugares(this.value);"></select>
